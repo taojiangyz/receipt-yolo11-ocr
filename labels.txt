@@ -1,0 +1,4 @@
+store_name
+date
+items_area
+total_amount

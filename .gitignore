@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Ultralytics / training outputs
+runs/
+wandb/
+
+# Large model weights
+*.pt
+*.onnx
+*.engine
+
+# Dataset images and labels
+data/
+
+# Cache
+.cache/
+outputs/
