@@ -73,17 +73,69 @@ The model detects key receipt regions such as store name, date, total amount, an
 
 ![F1 Curve](assets/evaluation/BoxF1_curve.png)
 
+## OCR and JSON Output
+
+The project has been extended from YOLO11 detection-only to an end-to-end receipt OCR pipeline.
+
+After YOLO11 detects the key receipt regions, each region is cropped and passed to OCR separately.
+
+Current OCR pipeline:
+
+Receipt image
+→ YOLO11 region detection
+→ Cropped receipt fields
+→ EasyOCR text extraction
+→ JSON output
+
+The OCR script reads the cropped regions and exports the result as JSON.
+
+Example OCR command:
+
+    python3 src/ocr_receipt.py --crop_dir outputs/crops/family_002_c
+
+Example JSON output:
+
+    {
+      "image_id": "family_002_c",
+      "store_name_raw": "Familylart",
+      "store_name_candidate": "FamilyMart",
+      "date_raw": "2026年 6月23日 (火) 19.16",
+      "total_amount_raw": "令 言十\n半日1ロ",
+      "total_amount_candidate": "",
+      "items_text": "海鮮スティック明太マ サラダチキンロール\n半180軽 判3軽"
+    }
+
 ## Current Status
 
-The YOLO11 detection model has been trained and evaluated.  
-The predicted bounding boxes are visually close to the manually annotated ground-truth boxes.
+The YOLO11 detection model has been trained and evaluated.
 
-This indicates that the model can detect key receipt layout regions and can be used as a preprocessing step before OCR.
+The model can detect key receipt layout regions such as store name, date, total amount, and item area. The detection results are visually close to the manually annotated ground-truth boxes.
+
+The project now includes:
+
+- YOLO11 receipt region detection
+- Region cropping
+- EasyOCR-based OCR extraction
+- Store name normalization
+- JSON export
+- Batch processing workflow
+
+## Current Limitation
+
+EasyOCR is used as the first OCR baseline.
+
+The pipeline can generate JSON outputs from cropped receipt regions, but total amount recognition is still unstable in the current version.
+
+In a small preliminary test, `total_amount_candidate` was extracted in 4 out of 35 tested receipts. This suggests that amount-specific preprocessing or another OCR engine should be evaluated in the next version.
+
+When no reliable amount is detected, the current version keeps `total_amount_candidate` empty instead of returning an incorrect value.
 
 ## Next Steps
 
-- Crop detected regions from receipt images
-- Apply OCR to each cropped region
-- Extract store name, date, and total amount as structured fields
-- Output items_area as raw OCR text
+- Improve total amount recognition with amount-specific preprocessing
+- Compare EasyOCR with Tesseract and PaddleOCR
+- Add date normalization
+- Improve store name normalization for FamilyMart, LAWSON, 7-Eleven, and MyBasket
+- Add OCR error analysis
 - Build a simple Streamlit demo
+- Add tests for JSON output format
