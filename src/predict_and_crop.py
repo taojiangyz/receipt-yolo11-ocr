@@ -5,6 +5,10 @@ from ultralytics import YOLO
 
 
 def expand_box(x1, y1, x2, y2, img_w, img_h, margin=0.05):
+    """
+    Expand a bounding box with the same margin on all sides.
+    Used for general receipt fields.
+    """
     box_w = x2 - x1
     box_h = y2 - y1
 
@@ -15,6 +19,23 @@ def expand_box(x1, y1, x2, y2, img_w, img_h, margin=0.05):
     y1 = max(0, int(y1 - dy))
     x2 = min(img_w, int(x2 + dx))
     y2 = min(img_h, int(y2 + dy))
+
+    return x1, y1, x2, y2
+
+
+def expand_box_custom(x1, y1, x2, y2, img_w, img_h, left=0.05, right=0.05, top=0.05, bottom=0.05):
+    """
+    Expand a bounding box with different margins for each side.
+    This is useful for OCR fields such as total_amount, where the amount
+    is often near the right edge or slightly lower than the detected box.
+    """
+    box_w = x2 - x1
+    box_h = y2 - y1
+
+    x1 = max(0, int(x1 - box_w * left))
+    y1 = max(0, int(y1 - box_h * top))
+    x2 = min(img_w, int(x2 + box_w * right))
+    y2 = min(img_h, int(y2 + box_h * bottom))
 
     return x1, y1, x2, y2
 
@@ -78,7 +99,19 @@ def predict_and_crop(model_path, image_path, output_dir, conf=0.25, imgsz=640):
     for cls_name, item in best_by_class.items():
         score = item["confidence"]
         x1, y1, x2, y2 = item["box"]
-        x1, y1, x2, y2 = expand_box(x1, y1, x2, y2, img_w, img_h, margin=0.05)
+        if cls_name == "total_amount":
+            # Use larger OCR-oriented padding for total_amount.
+            # The amount is often close to the right edge or slightly lower than the YOLO box.
+            x1, y1, x2, y2 = expand_box_custom(
+                x1, y1, x2, y2,
+                img_w, img_h,
+                left=0.10,
+                right=0.35,
+                top=0.15,
+                bottom=0.30
+            )
+        else:
+            x1, y1, x2, y2 = expand_box(x1, y1, x2, y2, img_w, img_h, margin=0.05)
 
         crop = image[y1:y2, x1:x2]
 

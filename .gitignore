@@ -19,3 +19,4 @@ data/
 # Cache
 .cache/
 outputs/
+.venv-paddle/
