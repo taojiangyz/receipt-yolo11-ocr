@@ -337,14 +337,14 @@ The following overview image shows cropped receipt fields used in the OCR pipeli
 
 ![Demo Samples Overview](assets/demo/demo_samples_overview.png)
 
-### Streamlit-style Demo Preview  
-### Streamlit風デモプレビュー
+### Streamlit Upload Demo  
+### Streamlitアップロードデモ
 
-The following GIF shows a portfolio-style demo flow using one selected receipt sample.
+The following GIF shows the Streamlit demo. After uploading a receipt image, the app runs YOLO11 detection, crops key fields, applies PaddleOCR, and outputs structured JSON.
 
-以下のGIFでは、選定した1枚のレシートサンプルを使って、ポートフォリオ用デモの流れを示しています。
+以下のGIFでは、レシート画像をアップロードした後、YOLO11による領域検出、切り出し、PaddleOCRによるOCR、構造化JSON出力までの流れを確認できます。
 
-![Streamlit Demo Preview](assets/demo/streamlit_demo.gif)
+![Streamlit Upload Demo](assets/demo/streamlit_upload_demo.gif)
 
 These samples demonstrate field detection, region cropping, OCR extraction, and JSON output across different receipt layouts.
 
