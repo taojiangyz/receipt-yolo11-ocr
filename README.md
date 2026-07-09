@@ -311,28 +311,37 @@ JSON出力例：
 ## Demo Samples  
 ## デモサンプル
 
-The final demo samples cover multiple Japanese convenience store chains:
+The final demo samples cover multiple Japanese convenience store chains and different receipt layouts.
 
-最終デモサンプルは、複数の日本のコンビニチェーンを対象としています。
+最終デモサンプルは、複数の日本のコンビニチェーンと異なるレシートレイアウトを対象としています。
 
-- FamilyMart
-- 7-Eleven
-- LAWSON
-- MyBasket
+| Store | Sample ID | Detection | OCR / JSON Output |
+|---|---|---|---|
+| FamilyMart | `family_002_c` | Success | Success |
+| FamilyMart | `family_011_c` | Success | Success |
+| 7-Eleven | `seven_006_b` | Success | Success |
+| LAWSON | `lawson_016_a` | Success | Success |
+| MyBasket | `mybasket_009_a` | Success | Success |
 
-Selected demo samples:
+| 店舗 | サンプルID | 領域検出 | OCR / JSON出力 |
+|---|---|---|---|
+| FamilyMart | `family_002_c` | 成功 | 成功 |
+| FamilyMart | `family_011_c` | 成功 | 成功 |
+| 7-Eleven | `seven_006_b` | 成功 | 成功 |
+| LAWSON | `lawson_016_a` | 成功 | 成功 |
+| MyBasket | `mybasket_009_a` | 成功 | 成功 |
 
-選定したデモサンプル：
+The following overview image shows cropped receipt fields used in the OCR pipeline.
 
-- `family_002_c`
-- `family_011_c`
-- `seven_006_b`
-- `lawson_016_a`
-- `mybasket_009_a`
+以下の画像は、OCRパイプラインで使用する切り出し済みレシート領域の概要です。
+
+![Demo Samples Overview](assets/demo/demo_samples_overview.png)
 
 These samples demonstrate field detection, region cropping, OCR extraction, and JSON output across different receipt layouts.
 
 これらのサンプルにより、異なるレシートレイアウトに対して、領域検出、切り出し、OCR抽出、JSON出力までの流れを確認できます。
+
+---
 
 ## Current Status  
 ## 現在の状況
