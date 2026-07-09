@@ -37,6 +37,23 @@ After these regions are detected, each region can be cropped and passed to OCR s
 
 ---
 
+### Streamlit Upload Demo  
+### Streamlitアップロードデモ
+
+The following GIF shows the Streamlit demo. After uploading a receipt image, the app runs YOLO11 detection, crops key fields, applies PaddleOCR, and outputs structured JSON.
+
+以下のGIFでは、レシート画像をアップロードした後、YOLO11による領域検出、切り出し、PaddleOCRによるOCR、構造化JSON出力までの流れを確認できます。
+
+![Streamlit Upload Demo](assets/demo/streamlit_upload_demo.gif)
+
+These samples demonstrate field detection, region cropping, OCR extraction, and JSON output across different receipt layouts.
+
+これらのサンプルにより、異なるレシートレイアウトに対して、領域検出、切り出し、OCR抽出、JSON出力までの流れを確認できます。
+
+---
+
+---
+
 ## Pipeline  
 ## パイプライン
 
@@ -336,21 +353,6 @@ The following overview image shows cropped receipt fields used in the OCR pipeli
 以下の画像は、OCRパイプラインで使用する切り出し済みレシート領域の概要です。
 
 ![Demo Samples Overview](assets/demo/demo_samples_overview.png)
-
-### Streamlit Upload Demo  
-### Streamlitアップロードデモ
-
-The following GIF shows the Streamlit demo. After uploading a receipt image, the app runs YOLO11 detection, crops key fields, applies PaddleOCR, and outputs structured JSON.
-
-以下のGIFでは、レシート画像をアップロードした後、YOLO11による領域検出、切り出し、PaddleOCRによるOCR、構造化JSON出力までの流れを確認できます。
-
-![Streamlit Upload Demo](assets/demo/streamlit_upload_demo.gif)
-
-These samples demonstrate field detection, region cropping, OCR extraction, and JSON output across different receipt layouts.
-
-これらのサンプルにより、異なるレシートレイアウトに対して、領域検出、切り出し、OCR抽出、JSON出力までの流れを確認できます。
-
----
 
 ## Current Status  
 ## 現在の状況
