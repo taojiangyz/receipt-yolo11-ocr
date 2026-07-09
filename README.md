@@ -1,10 +1,12 @@
 # Receipt YOLO11 OCR Project
+# レシートYOLO11 OCRプロジェクト
 
 This project detects key layout regions from Japanese convenience store receipts using YOLO11.
 
 The goal is to improve receipt OCR by first detecting important regions, instead of applying OCR to the entire receipt image directly.
 
-## Project Overview
+## Project Overview  
+## プロジェクト概要
 
 Receipt images often contain many small text lines, different layouts, background noise, and tilted photos.  
 Direct OCR on the whole receipt can be unstable.
@@ -20,7 +22,8 @@ The model detects the following receipt regions:
 
 After these regions are detected, each region can be cropped and passed to OCR separately.
 
-## Pipeline
+## Pipeline  
+## パイプライン
 
 1. Collect Japanese convenience store receipt images
 2. Annotate key receipt regions with bounding boxes
@@ -31,7 +34,8 @@ After these regions are detected, each region can be cropped and passed to OCR s
 7. Apply OCR to extract text
 8. Output structured receipt information
 
-## Model
+## Model  
+## モデル
 
 - Model: YOLO11
 - Task: Object Detection
@@ -42,7 +46,101 @@ After these regions are detected, each region can be cropped and passed to OCR s
   - total_amount
   - items_area
 
-## Qualitative Evaluation Examples
+## Data Collection  
+## データ収集
+
+This project uses a small custom dataset of Japanese convenience store receipt images collected by myself.
+
+本プロジェクトでは、自分で収集した日本のコンビニレシート画像の小規模カスタムデータセットを使用しています。
+
+The dataset includes receipts from multiple Japanese convenience store chains, such as FamilyMart, LAWSON, 7-Eleven, and MyBasket.
+
+データセットには、FamilyMart、LAWSON、7-Eleven、MyBasketなど、複数の日本のコンビニチェーンのレシートが含まれています。
+
+Receipt photos were taken under different conditions, including different angles, distances, lighting conditions, and receipt layouts.
+
+レシート画像は、異なる角度、距離、照明条件、レイアウトを含む複数の条件で撮影しました。
+
+The following key regions were manually annotated with bounding boxes:
+
+以下の重要領域に対して、手動でバウンディングボックスを付与しました。
+
+- `store_name`
+- `date`
+- `total_amount`
+- `items_area`
+
+The annotations were converted into YOLO format for object detection training.
+
+アノテーションは、物体検出モデルの学習に使用するため、YOLO形式に変換しました。
+
+---
+
+## Training and Inference  
+## 学習と推論
+
+A YOLO11 object detection model was trained to detect key receipt regions.
+
+YOLO11物体検出モデルを学習し、レシート内の重要領域を検出できるようにしました。
+
+The model was trained with an input image size of 640 and four detection classes.
+
+モデルは入力画像サイズ640、4つの検出クラスで学習しました。
+
+During inference, the trained YOLO11 model predicts bounding boxes for each receipt image.  
+The prediction script then selects detected regions, crops them, and saves each cropped field for OCR.
+
+推論時には、学習済みYOLO11モデルが各レシート画像に対してバウンディングボックスを予測します。  
+その後、推論スクリプトが検出領域を切り出し、OCR用のフィールド画像として保存します。
+
+The cropped fields are saved under:
+
+切り出されたフィールド画像は以下に保存されます。
+
+```text
+outputs/crops/
+```
+
+The cropped regions are then passed to PaddleOCR for text extraction and JSON output.
+
+その後、切り出された領域をPaddleOCRに渡し、文字認識とJSON出力を行います。
+
+---
+
+## Model Evaluation  
+## モデル評価
+
+The YOLO11 model was evaluated using validation images.
+
+YOLO11モデルは検証用画像を用いて評価しました。
+
+The final training epoch produced the following validation metrics:
+
+最終エポックでは、以下の検証指標が得られました。
+
+| Metric | Value |
+|---|---:|
+| Precision | 0.903 |
+| Recall | 0.913 |
+| mAP50 | 0.892 |
+| mAP50-95 | 0.523 |
+
+These results show that the model can detect key receipt regions with reasonably high precision and recall.
+
+これらの結果から、モデルはレシート内の重要領域を比較的高い適合率と再現率で検出できていることが分かります。
+
+In addition to numerical metrics, qualitative evaluation was also performed by comparing predicted bounding boxes with manual annotations.
+
+数値指標に加えて、予測されたバウンディングボックスと手動アノテーションを比較する定性的評価も行いました。
+
+For this project, detection quality is especially important because OCR accuracy depends heavily on whether the correct receipt regions are cropped.
+
+本プロジェクトでは、OCR精度が正しい領域切り出しに大きく依存するため、検出品質が特に重要です。
+
+---
+
+## Qualitative Evaluation Examples  
+## 定性的評価例
 
 The following examples show YOLO11 predictions on Japanese convenience store receipt images.  
 The model detects key receipt regions such as store name, date, total amount, and item area.
@@ -59,7 +157,8 @@ The model detects key receipt regions such as store name, date, total amount, an
 
 ![MyBasket Prediction](assets/evaluation/mybasket_001_b.jpg)
 
-## Evaluation Results
+## Evaluation Results  
+## 評価結果
 
 ### Normalized Confusion Matrix
 
