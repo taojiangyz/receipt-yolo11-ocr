@@ -337,6 +337,15 @@ The following overview image shows cropped receipt fields used in the OCR pipeli
 
 ![Demo Samples Overview](assets/demo/demo_samples_overview.png)
 
+### Streamlit-style Demo Preview  
+### Streamlit風デモプレビュー
+
+The following GIF shows a portfolio-style demo flow using one selected receipt sample.
+
+以下のGIFでは、選定した1枚のレシートサンプルを使って、ポートフォリオ用デモの流れを示しています。
+
+![Streamlit Demo Preview](assets/demo/streamlit_demo.gif)
+
 These samples demonstrate field detection, region cropping, OCR extraction, and JSON output across different receipt layouts.
 
 これらのサンプルにより、異なるレシートレイアウトに対して、領域検出、切り出し、OCR抽出、JSON出力までの流れを確認できます。

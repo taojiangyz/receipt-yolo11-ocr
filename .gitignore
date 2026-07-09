@@ -20,3 +20,4 @@ data/
 .cache/
 outputs/
 .venv-paddle/
+.streamlit_runtime/
