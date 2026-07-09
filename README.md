@@ -1,9 +1,13 @@
-# Receipt YOLO11 OCR Project
+# Receipt YOLO11 OCR Project  
 # レシートYOLO11 OCRプロジェクト
 
-This project detects key layout regions from Japanese convenience store receipts using YOLO11.
-
+This project detects key layout regions from Japanese convenience store receipts using YOLO11.  
 The goal is to improve receipt OCR by first detecting important regions, instead of applying OCR to the entire receipt image directly.
+
+本プロジェクトは、YOLO11を用いて日本のコンビニレシート画像から重要なレイアウト領域を検出するプロジェクトです。  
+レシート画像全体に直接OCRを適用するのではなく、先に重要領域を検出することで、OCR精度の改善を目指しています。
+
+---
 
 ## Project Overview  
 ## プロジェクト概要
@@ -11,40 +15,73 @@ The goal is to improve receipt OCR by first detecting important regions, instead
 Receipt images often contain many small text lines, different layouts, background noise, and tilted photos.  
 Direct OCR on the whole receipt can be unstable.
 
-Therefore, this project uses object detection as a preprocessing step.
+レシート画像には、小さな文字、店舗ごとの異なるレイアウト、背景ノイズ、傾きなどが含まれます。  
+そのため、画像全体に直接OCRをかけると、認識結果が不安定になることがあります。
+
+Therefore, this project uses object detection as a preprocessing step before OCR.
+
+そのため、本プロジェクトではOCRの前処理として物体検出を使用しています。
 
 The model detects the following receipt regions:
 
-- store_name
-- date
-- total_amount
-- items_area
+検出対象のレシート領域は以下の通りです。
+
+- `store_name`
+- `date`
+- `total_amount`
+- `items_area`
 
 After these regions are detected, each region can be cropped and passed to OCR separately.
+
+これらの領域を検出した後、それぞれの領域を切り出し、個別にOCRへ入力します。
+
+---
 
 ## Pipeline  
 ## パイプライン
 
-1. Collect Japanese convenience store receipt images
-2. Annotate key receipt regions with bounding boxes
-3. Train a YOLO11 object detection model
-4. Evaluate the model using validation images
-5. Compare predicted bounding boxes with manual labels
-6. Crop detected regions
-7. Apply OCR to extract text
-8. Output structured receipt information
+1. Collect Japanese convenience store receipt images  
+2. Annotate key receipt regions with bounding boxes  
+3. Train a YOLO11 object detection model  
+4. Evaluate the model using validation images  
+5. Compare predicted bounding boxes with manual labels  
+6. Crop detected regions  
+7. Apply OCR to extract text  
+8. Output structured receipt information  
+
+1. 日本のコンビニレシート画像を収集  
+2. 重要領域にバウンディングボックスを付与  
+3. YOLO11物体検出モデルを学習  
+4. 検証画像でモデルを評価  
+5. 予測されたバウンディングボックスと手動ラベルを比較  
+6. 検出領域を切り出し  
+7. OCRを適用して文字情報を抽出  
+8. 構造化されたレシート情報を出力  
+
+---
 
 ## Model  
 ## モデル
 
-- Model: YOLO11
-- Task: Object Detection
-- Input image size: 640
+- Model: YOLO11  
+- Task: Object Detection  
+- Input image size: 640  
 - Classes:
-  - store_name
-  - date
-  - total_amount
-  - items_area
+  - `store_name`
+  - `date`
+  - `total_amount`
+  - `items_area`
+
+- モデル：YOLO11  
+- タスク：物体検出  
+- 入力画像サイズ：640  
+- クラス：
+  - `store_name`
+  - `date`
+  - `total_amount`
+  - `items_area`
+
+---
 
 ## Data Collection  
 ## データ収集
