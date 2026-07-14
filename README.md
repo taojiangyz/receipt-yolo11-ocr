@@ -418,20 +418,12 @@ Therefore, PaddleOCR was selected as the main OCR engine for the MVP, while Easy
 
 そのため、MVPではPaddleOCRを主OCRエンジンとして採用し、EasyOCRとTesseractは比較実験およびエラー分析用のベースラインとして残しています。
 
-## Example OCR Command  
-## OCR実行例
+## Example JSON Output
+## JSON出力例
 
-Run PaddleOCR on cropped receipt regions:
+The final pipeline exports raw OCR text and normalized candidate values as structured JSON.
 
-切り出されたレシート領域に対してPaddleOCRを実行します。
-
-```bash
-python3 src/ocr_receipt_paddle.py --crop_dir outputs/crops/family_002_c
-```
-
-Example JSON output:
-
-JSON出力例：
+最終パイプラインでは、OCRの生テキストと正規化した候補値を構造化JSONとして出力します。
 
 ```json
 {
