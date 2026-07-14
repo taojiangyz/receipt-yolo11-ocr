@@ -223,36 +223,6 @@ After training, the YOLO11 model detects the four receipt fields. The detected r
 
 学習済みYOLO11モデルでレシート内の4つの領域を検出し、その結果をPaddleOCRへ入力して文字認識を行い、構造化されたJSONとして出力します。
 
-## 学習と推論
-
-A YOLO11 object detection model was trained to detect key receipt regions.
-
-YOLO11物体検出モデルを学習し、レシート内の重要領域を検出できるようにしました。
-
-The model was trained with an input image size of 640 and four detection classes.
-
-モデルは入力画像サイズ640、4つの検出クラスで学習しました。
-
-During inference, the trained YOLO11 model predicts bounding boxes for each receipt image.  
-The prediction script then selects detected regions, crops them, and saves each cropped field for OCR.
-
-推論時には、学習済みYOLO11モデルが各レシート画像に対してバウンディングボックスを予測します。  
-その後、推論スクリプトが検出領域を切り出し、OCR用のフィールド画像として保存します。
-
-The cropped fields are saved under:
-
-切り出されたフィールド画像は以下に保存されます。
-
-```text
-outputs/crops/
-```
-
-The cropped regions are then passed to PaddleOCR for text extraction and JSON output.
-
-その後、切り出された領域をPaddleOCRに渡し、文字認識とJSON出力を行います。
-
----
-
 ## Model Evaluation  
 ## モデル評価
 
