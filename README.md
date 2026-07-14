@@ -106,6 +106,61 @@ These samples demonstrate field detection, region cropping, OCR extraction, and 
 
 ---
 
+## Dataset Summary  
+## データセット概要
+
+The dataset was created from Japanese convenience store receipts collected and photographed for this project.
+
+本プロジェクトでは、日本のコンビニレシートを収集・撮影し、独自データセットを作成しました。
+
+| Item | Details |
+|---|---|
+| Original receipts | 65 |
+| Total images | 195 |
+| Images per receipt | 3 shooting angles |
+| Convenience store chains | 4 |
+| Detection classes | 4 |
+| Annotation method | Manual bounding-box annotation |
+
+| 項目 | 内容 |
+|---|---|
+| 元のレシート数 | 65枚 |
+| 画像総数 | 195枚 |
+| 各レシートの撮影枚数 | 3つの角度 |
+| 対象コンビニチェーン | 4社 |
+| 検出クラス数 | 4クラス |
+| アノテーション方法 | 手動によるバウンディングボックス付与 |
+
+### Image Distribution by Store  
+### 店舗別画像数
+
+| Store | Number of Images |
+|---|---:|
+| FamilyMart | 48 |
+| LAWSON | 48 |
+| 7-Eleven | 48 |
+| MyBasket | 51 |
+| **Total** | **195** |
+
+Each original receipt was photographed from three different angles to include variations in tilt and position.
+
+各レシートを3つの角度から撮影し、傾きや位置の違いをデータに含めました。
+
+The following four regions were manually annotated:
+
+以下の4領域を手動でアノテーションしました。
+
+- `store_name`
+- `date`
+- `total_amount`
+- `items_area`
+
+Because multiple images can originate from the same physical receipt, receipt-level grouped splitting is important to prevent similar images from appearing across training and validation sets. This is an important point for future eva luation revisions.
+
+同じレシートから複数の画像を作成しているため、類似画像が学習用と検証用の両方に入らないよう、元のレシート単位でデータを分割することが重要です。今後の評価改善では、この点を特に重視します。
+
+---
+
 ## Data Collection  
 ## データ収集
 
@@ -133,6 +188,31 @@ The following key regions were manually annotated with bounding boxes:
 The annotations were converted into YOLO format for object detection training.
 
 アノテーションは、物体検出モデルの学習に使用するため、YOLO形式に変換しました。
+
+---
+
+## Why YOLO11?  
+## YOLO11を選択した理由
+
+YOLO11 was selected because it provides a practical balance between detection accuracy, inference speed, and implementation cost.
+
+YOLO11は、検出精度、推論速度、実装コストのバランスが良いため採用しました。
+
+The Ultralytics ecosystem provides an integrated workflow for training, validation, inference, visualization, and model export. This was suitable for building an MVP and a Streamlit demo within a limited development period.
+
+Ultralyticsには、学習、検証、推論、可視化、モデル出力までの統合環境があります。そのため、限られた開発期間でMVPとStreamlitデモを構築する目的に適していました。
+
+YOLO is a one-stage detector, so it is generally suitable for applications that require relatively fast inference.
+
+YOLOは一段階検出器であり、比較的高速な推論が必要なアプリケーションに適しています。
+
+YOLO11 also uses an anchor-free detection approach. Unlike traditional anchor-based detectors, it does not require manually designing predefined anchor-box sizes and aspect ratios.
+
+また、YOLO11はAnchor-free方式を採用しています。従来のAnchor-based検出器とは異なり、事前にAnchor Boxのサイズやアスペクト比を細かく設計する必要がありません。
+
+A controlled comparison with every alternative model, such as YOLOv8, SSD, and Faster R-CNN, was not performed. Therefore, this project does not claim that YOLO11 is universally the best model.
+
+YOLOv8、SSD、Faster R-CNNなど、すべての候補モデルとの比較実験は行っていません。そのため、YOLO11が常に最良のモデルであるとは主張していません。
 
 ---
 
@@ -174,9 +254,9 @@ The YOLO11 model was evaluated using validation images.
 
 YOLO11モデルは検証用画像を用いて評価しました。
 
-The final training epoch produced the following validation metrics:
+The following validation metrics were recorded from the completed YOLO11 training run:
 
-最終エポックでは、以下の検証指標が得られました。
+完了したYOLO11学習実験では、以下の検証指標が記録されました。
 
 | Metric | Value |
 |---|---:|
@@ -184,6 +264,11 @@ The final training epoch produced the following validation metrics:
 | Recall | 0.913 |
 | mAP50 | 0.892 |
 | mAP50-95 | 0.523 |
+
+The relatively high mAP50 indicates that the model generally detects the target receipt regions successfully. The lower mAP50-95 indicates that bounding-box localization still has room for improvement under stricter IoU thresholds.
+
+mAP50が比較的高いことから、対象領域自体は概ね検出できています。一方、mAP50-95はmAP50より低いため、より厳しいIoU条件ではバウンディングボックス位置に改善の余地があります。
+
 
 These results show that the model can detect key receipt regions with reasonably high precision and recall.
 
@@ -196,6 +281,35 @@ In addition to numerical metrics, qualitative evaluation was also performed by c
 For this project, detection quality is especially important because OCR accuracy depends heavily on whether the correct receipt regions are cropped.
 
 本プロジェクトでは、OCR精度が正しい領域切り出しに大きく依存するため、検出品質が特に重要です。
+
+---
+
+## Technical Notes  
+## 技術補足
+
+| Concept | Role in This Project |
+|---|---|
+| Ground Truth | Manually annotated receipt-field bounding boxes used as training targets |
+| Backbone | Extracts visual features from receipt images |
+| Neck | Combines multi-scale features for detecting fields of different sizes |
+| Detection Head | Predicts field classes and bounding-box positions |
+| NMS | Removes duplicated overlapping predictions during inference |
+| Anchor Strategy | YOLO11 uses an anchor-free approach |
+| Box Loss | Learns bounding-box localization |
+| Classification Loss | Learns the four receipt-field classes |
+| DFL | Refines the prediction of bounding-box boundaries |
+
+| 技術概念 | 本プロジェクトでの役割 |
+|---|---|
+| Ground Truth | 学習の正解として使用する、手動で付与した領域ボックス |
+| Backbone | レシート画像から視覚的特徴を抽出 |
+| Neck | 異なるスケールの特徴を統合 |
+| Detection Head | クラスとバウンディングボックスを予測 |
+| NMS | 推論時に重複した予測ボックスを削除 |
+| Anchor方式 | YOLO11はAnchor-free方式を採用 |
+| Box Loss | バウンディングボックスの位置を学習 |
+| Classification Loss | 4つのレシート領域クラスを学習 |
+| DFL | バウンディングボックス境界の予測を細かく調整 |
 
 ---
 
@@ -231,6 +345,54 @@ The model detects key receipt regions such as store name, date, total amount, an
 ### F1 Curve
 
 ![F1 Curve](assets/evaluation/BoxF1_curve.png)
+
+## Error Analysis and Improvements  
+## エラー分析と改善
+
+The failure cases were analyzed by separating the pipeline into detection, cropping, OCR, and post-processing stages.
+
+失敗ケースについては、検出、切り出し、OCR、後処理の各段階に分けて原因を確認しました。
+
+### Case 1: Incomplete Total Amount Crops  
+### ケース1：合計金額の切り出し不足
+
+Some total amount values were close to the right or lower edge of the detected bounding box. A uniform crop margin sometimes removed part of the amount.
+
+一部のレシートでは、合計金額が検出ボックスの右端または下側に近く、通常の余白では金額の一部が欠ける場合がありました。
+
+**Improvement / 改善**
+
+Field-specific padding was added to `total_amount`. The right and lower margins were expanded more than those of the other fields.
+
+`total_amount`専用のパディングを追加し、他のフィールドよりも右側と下側の余白を大きくしました。
+
+### Case 2: Unstable OCR Results  
+### ケース2：OCR結果の不安定さ
+
+EasyOCR was initially used as the baseline OCR engine. Error analysis showed that it was unstable for Japanese store logos and total amounts.
+
+最初はEasyOCRをベースラインとして使用しましたが、エラー分析の結果、日本語の店舗ロゴや合計金額で認識が不安定であることが分かりました。
+
+**Improvement / 改善**
+
+EasyOCR, Tesseract, and PaddleOCR were tested on the same YOLO-cropped regions. PaddleOCR produced more stable results for store name, date, total amount, and item text, so it was selected as the main OCR engine for the MVP.
+
+同じYOLO切り出し領域に対してEasyOCR、Tesseract、PaddleOCRを比較しました。店舗名、日付、合計金額、商品明細でPaddleOCRの結果がより安定していたため、MVPの主OCRエンジンとして採用しました。
+
+### Case 3: Runtime Conflict in the Streamlit Demo  
+### ケース3：Streamlitデモの実行時競合
+
+In the local macOS environment, initializing PaddlePaddle before YOLO inference caused a runtime conflict during the YOLO NMS stage.
+
+ローカルのmacOS環境では、YOLO推論前にPaddlePaddleを初期化すると、YOLOのNMS処理時に実行環境の競合が発生しました。
+
+**Improvement / 改善**
+
+The execution order was changed so that YOLO detection and cropping run first. PaddleOCR is then imported and initialized lazily after detection is complete.
+
+YOLOによる検出と切り出しを先に実行し、その完了後にPaddleOCRを遅延読み込みする構成へ変更しました。
+
+---
 
 ## OCR and JSON Output  
 ## OCRとJSON出力
@@ -354,6 +516,35 @@ The following overview image shows cropped receipt fields used in the OCR pipeli
 
 ![Demo Samples Overview](assets/demo/demo_samples_overview.png)
 
+## Run the Streamlit Demo  
+## Streamlitデモの実行
+
+The application accepts a receipt image upload and runs the complete YOLO11 and PaddleOCR pipeline.
+
+本アプリケーションでは、レシート画像をアップロードし、YOLO11とPaddleOCRによる一連の処理を実行できます。
+
+```bash
+streamlit run streamlit_app.py
+```
+
+Expected model path:
+
+必要なモデルのパス：
+
+```text
+runs/detect/receipt_yolo11_640-2/weights/best.pt
+```
+
+The local demo expects the trained YOLO11 weight at `runs/detect/receipt_yolo11_640-2/weights/best.pt`. The weight file may not be included in the repository, so it must be prepared before running the app.
+
+ローカルデモでは `runs/detect/receipt_yolo11_640-2/weights/best.pt` に学習済みYOLO11モデルが必要です。モデルファイルがリポジトリに含まれていない場合は、実行前に用意する必要があります。
+
+The current PaddleOCR environment was tested with Python 3.12.
+
+現在のPaddleOCR環境はPython 3.12で動作確認しています。
+
+---
+
 ## Current Status  
 ## 現在の状況
 
@@ -384,6 +575,35 @@ The project currently includes:
 The current MVP can detect and crop receipt regions, apply OCR to each cropped field, and export structured JSON results.
 
 現在のMVPでは、レシート領域を検出・切り出し、各フィールドにOCRを適用し、構造化JSONとして出力できます。
+
+## Design Trade-offs  
+## 設計上のトレードオフ
+
+This MVP was designed by considering accuracy, inference speed, development cost, and reliability.
+
+本MVPでは、精度、推論速度、開発コスト、信頼性のバランスを考慮しました。
+
+| Factor | Design Decision |
+|---|---|
+| Accuracy | Detect only the four fields required for the MVP and apply OCR separately |
+| Speed | Apply OCR to cropped regions instead of the entire receipt image |
+| Development Cost | Use Ultralytics and PaddleOCR instead of training an OCR model from scratch |
+| Reliability | Prefer an empty value over an unreliable value for high-risk fields |
+| Maintainability | Separate detection, cropping, OCR, and post-processing stages |
+
+| 観点 | 設計方針 |
+|---|---|
+| 精度 | MVPに必要な4領域を検出し、それぞれにOCRを適用 |
+| 速度 | 画像全体ではなく、切り出した領域だけをOCR処理 |
+| 開発コスト | OCRモデルを一から学習せず、UltralyticsとPaddleOCRを活用 |
+| 信頼性 | 重要項目では、不確かな値より空欄を優先 |
+| 保守性 | 検出、切り出し、OCR、後処理を段階ごとに分離 |
+
+For `total_amount`, an incorrect value can be more harmful than a missing value. A production system should therefore use confidence thresholds, validation rules, and human review for uncertain results.
+
+`total_amount`では、値が空欄になることよりも、誤った金額を返すことの方が大きな問題になる可能性があります。実運用では、信頼度閾値、検証ルール、人による確認が必要です。
+
+---
 
 ## Current Limitation  
 ## 現在の制限
@@ -418,21 +638,15 @@ Future versions should include stronger confidence checking and validation.
 `total_amount` のような重要フィールドでは、誤った値を返すことは空欄にするよりもリスクが高いです。  
 今後は、より強い信頼度チェックと検証処理を追加する必要があります。
 
-## Future Work  
+## Future Work
 ## 今後の改善
 
-- Add item-level parsing for `items_area`
-- Add stronger amount validation and confidence checks
-- Improve date and time normalization
+- Increase the number and diversity of receipt images
+- Build OCR ground truth and calculate field-level accuracy
+- Add stronger total amount validation and confidence checks
 - Add receipt deskew preprocessing for tilted images
-- Add more demo samples and evaluation metrics for OCR accuracy
-- Build a simple Streamlit demo
-- Add tests for JSON output format
 
-- `items_area` の商品単位の構造化解析を追加
-- 金額の検証と信頼度チェックを強化
-- 日付・時刻の正規化を改善
-- 傾いたレシート画像に対する傾き補正を追加
-- OCR精度評価用のデモサンプルと評価指標を追加
-- 簡単なStreamlitデモを作成
-- JSON出力形式のテストを追加
+- レシート画像の件数と多様性を拡大
+- OCR正解データを作成し、フィールド単位の精度を評価
+- 合計金額の検証と信頼度チェックを強化
+- 傾いたレシート画像の補正を追加
