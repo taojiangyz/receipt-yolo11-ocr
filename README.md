@@ -273,34 +273,6 @@ For this project, detection quality is especially important because OCR accuracy
 
 本プロジェクトでは、手動アノテーションをGround Truthとして使用し、YOLO11のAnchor-free検出とNMSによって最終的な領域を出力します。
 
-## 技術補足
-
-| Concept | Role in This Project |
-|---|---|
-| Ground Truth | Manually annotated receipt-field bounding boxes used as training targets |
-| Backbone | Extracts visual features from receipt images |
-| Neck | Combines multi-scale features for detecting fields of different sizes |
-| Detection Head | Predicts field classes and bounding-box positions |
-| NMS | Removes duplicated overlapping predictions during inference |
-| Anchor Strategy | YOLO11 uses an anchor-free approach |
-| Box Loss | Learns bounding-box localization |
-| Classification Loss | Learns the four receipt-field classes |
-| DFL | Refines the prediction of bounding-box boundaries |
-
-| 技術概念 | 本プロジェクトでの役割 |
-|---|---|
-| Ground Truth | 学習の正解として使用する、手動で付与した領域ボックス |
-| Backbone | レシート画像から視覚的特徴を抽出 |
-| Neck | 異なるスケールの特徴を統合 |
-| Detection Head | クラスとバウンディングボックスを予測 |
-| NMS | 推論時に重複した予測ボックスを削除 |
-| Anchor方式 | YOLO11はAnchor-free方式を採用 |
-| Box Loss | バウンディングボックスの位置を学習 |
-| Classification Loss | 4つのレシート領域クラスを学習 |
-| DFL | バウンディングボックス境界の予測を細かく調整 |
-
----
-
 ## Qualitative Evaluation Examples  
 ## 定性的評価例
 
