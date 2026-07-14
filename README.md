@@ -468,7 +468,17 @@ The following overview image shows cropped receipt fields used in the OCR pipeli
 
 ![Demo Samples Overview](assets/demo/demo_samples_overview.png)
 
-## Run the Streamlit Demo  
+## Run the Streamlit Demo
+## Streamlitデモの実行
+
+Launch the local Streamlit application:
+
+ローカルでStreamlitデモを起動します。
+
+```bash
+streamlit run streamlit_app.py
+```
+
 ## Streamlitデモの実行
 
 The application accepts a receipt image upload and runs the complete YOLO11 and PaddleOCR pipeline.
