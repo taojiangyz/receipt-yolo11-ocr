@@ -260,7 +260,19 @@ For this project, detection quality is especially important because OCR accuracy
 
 ---
 
-## Technical Notes  
+## Technical Notes
+## 技術補足
+
+| Concept | Role in This Project |
+|---|---|
+| Ground Truth | Manually annotated bounding boxes used as training targets |
+| Backbone / Neck | Extract and combine multi-scale visual features |
+| Detection Head | Predicts receipt-field classes and bounding boxes |
+| NMS | Removes duplicated overlapping predictions during inference |
+| Anchor Strategy | YOLO11 uses an anchor-free detection approach |
+
+本プロジェクトでは、手動アノテーションをGround Truthとして使用し、YOLO11のAnchor-free検出とNMSによって最終的な領域を出力します。
+
 ## 技術補足
 
 | Concept | Role in This Project |
