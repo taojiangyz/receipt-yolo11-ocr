@@ -478,33 +478,6 @@ Launch the local Streamlit application:
 ```bash
 streamlit run streamlit_app.py
 ```
-
-## Streamlitデモの実行
-
-The application accepts a receipt image upload and runs the complete YOLO11 and PaddleOCR pipeline.
-
-本アプリケーションでは、レシート画像をアップロードし、YOLO11とPaddleOCRによる一連の処理を実行できます。
-
-```bash
-streamlit run streamlit_app.py
-```
-
-Expected model path:
-
-必要なモデルのパス：
-
-```text
-runs/detect/receipt_yolo11_640-2/weights/best.pt
-```
-
-The local demo expects the trained YOLO11 weight at `runs/detect/receipt_yolo11_640-2/weights/best.pt`. The weight file may not be included in the repository, so it must be prepared before running the app.
-
-ローカルデモでは `runs/detect/receipt_yolo11_640-2/weights/best.pt` に学習済みYOLO11モデルが必要です。モデルファイルがリポジトリに含まれていない場合は、実行前に用意する必要があります。
-
-The current PaddleOCR environment was tested with Python 3.12.
-
-現在のPaddleOCR環境はPython 3.12で動作確認しています。
-
 ---
 
 ## Current Status  
