@@ -21,3 +21,9 @@ data/
 outputs/
 .venv-paddle/
 .streamlit_runtime/
+
+# Local notes and recordings
+.agents/
+README_backup*.md
+README_before_*.md
+*.mov

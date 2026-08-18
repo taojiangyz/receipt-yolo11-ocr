@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import os
 import re
 import uuid
 
@@ -9,7 +10,12 @@ from PIL import Image
 from ultralytics import YOLO
 
 
-MODEL_PATH = Path("runs/detect/receipt_yolo11_640-2/weights/best.pt")
+MODEL_PATH = Path(
+    os.getenv("RECEIPT_MODEL_PATH", "models/best.pt")
+)
+LEGACY_MODEL_PATH = Path(
+    "runs/detect/receipt_yolo11_640-2/weights/best.pt"
+)
 RUNTIME_DIR = Path(".streamlit_runtime")
 RUNTIME_DIR.mkdir(exist_ok=True)
 
@@ -25,9 +31,15 @@ st.set_page_config(
 
 @st.cache_resource
 def load_yolo_model():
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError(f"YOLO model not found: {MODEL_PATH}")
-    return YOLO(str(MODEL_PATH))
+    model_path = (
+        MODEL_PATH if MODEL_PATH.exists() else LEGACY_MODEL_PATH
+    )
+    if not model_path.exists():
+        raise FileNotFoundError(
+            "YOLO model not found. Run `python download_model.py` "
+            "or set RECEIPT_MODEL_PATH."
+        )
+    return YOLO(str(model_path))
 
 
 @st.cache_resource
