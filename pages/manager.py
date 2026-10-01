@@ -1,6 +1,7 @@
 import os
 import hashlib
 import pandas as pd
+from src.receipt_quality import assess_receipt
 from src.receipt_items import parse_items, normalize_items, reconcile
 from datetime import date
 from pathlib import Path
@@ -26,6 +27,19 @@ def editor(values, image, raw, key, *, analysis=None, record=None):
             st.json(raw)
     with right:
         st.subheader("核对票据信息")
+        assessment = raw.get("quality_gate") or assess_receipt(raw)
+        with st.expander("识别质量检查", expanded=assessment["needs_multimodal"]):
+            if assessment["needs_multimodal"]:
+                st.warning("建议多模态补救（模型尚未接入，本次未发送图片）")
+            elif assessment["route"] == "retake":
+                st.warning("建议重拍或人工核对")
+            else:
+                st.info("未触发自动补救条件，仍需核对。")
+            for reason in assessment["reasons"]:
+                st.write("• " + reason["message"])
+            for advisory in assessment["advisories"]:
+                st.caption(advisory["message"])
+            st.caption("检查基于原始识别结果，保留为审计依据；人工修改不会覆盖原始检查。")
         st.caption("识别结果是候选值，请对照原图。缺失字段可先留空，保存为待核对。")
         parsed = parse_items(values["items"])
         if parsed["unmatched"]:
@@ -71,7 +85,7 @@ def editor(values, image, raw, key, *, analysis=None, record=None):
             st.info(comparison["message"])
         st.caption("上方比较基于已保存值／初始候选值，修改后保存即可更新。金额一致不代表识别正确。")
 
-mode = st.radio("工作区", ["新增票据", "历史票据"], horizontal=True)
+mode = st.radio("工作区", ["新增票据", "批量处理", "历史票据"], horizontal=True)
 if mode == "新增票据":
     upload = st.file_uploader("上传小票", type=["jpg", "jpeg", "png"], key="manager_upload")
     analysis = st.session_state.get("receipt_analysis")
@@ -99,6 +113,9 @@ if mode == "新增票据":
                    "new_" + analysis["digest"], analysis=analysis)
     else:
         st.info("上传小票开始，或先在识别实验室完成识别。")
+elif mode == "批量处理":
+    from src.receipt_batch_view import render_batch
+    render_batch(store, editor)
 else:
     query = st.text_input("搜索商户、类别或商品")
     status = st.selectbox("状态筛选", ["全部", "待核对", "已核对"])

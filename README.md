@@ -36,6 +36,31 @@ Validation: `python -m unittest discover -s tests -v` covers field parsing,
 persistence, duplicate prevention, stale-edit rejection, audit history, CSV escaping,
 and the Streamlit review/save/edit/reopen workflow without rerunning inference.
 
+### Conditional multimodal review — routing stage
+
+The manager now shows a versioned quality check for missing/invalid fields,
+conflicting totals and ambiguous item pairing. Original OCR, crop coordinates and
+routing reasons are preserved. A local review plan is prepared, but **no external
+multimodal model has been connected or called**. Total differences alone are advisory.
+
+See [hybrid recognition and evaluation](docs/hybrid-recognition.md) for annotation
+commands, metrics and limitations. An unreviewed manifest never produces an accuracy
+claim. Initial historical routing coverage is high (97/102), so cost savings are not
+yet established.
+
+### Batch processing
+
+The manager's **批量处理** workspace accepts up to 10 distinct images per queue,
+each at most 10 MB. Add images to the queue and start recognition. Processing is
+sequential; one failed image does not stop the remaining images. Retry buttons only
+rerun the selected failed image. Successful results can be reviewed individually or
+saved together as **pending review**; bulk save never marks receipts reviewed.
+
+Identical uploaded bytes are deduplicated within a queue and against the saved library.
+Storage errors keep successful recognition results available for another save attempt.
+The queue is session-local: save results before refreshing or closing the browser.
+Clearing the queue discards unsaved results but does not delete saved receipts.
+
 ### Item review and reconciliation
 
 The manager includes an editable item table (name and line total in integer JPY).

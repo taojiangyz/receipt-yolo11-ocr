@@ -4,6 +4,7 @@ from src.receipt_fields import normalize_store_name, extract_date, extract_amoun
 import io
 import hashlib
 import uuid
+from src.receipt_quality import assess_receipt, review_plan
 
 import numpy as np
 import streamlit as st
@@ -146,6 +147,7 @@ def crop_detected_fields(image: Image.Image, result, run_dir: Path):
             "image": crop,
             "path": crop_path,
             "confidence": best_boxes[field]["conf"],
+            "box": [x1, y1, x2, y2],
         }
 
     return crops
@@ -188,10 +190,20 @@ def analyze_image(payload: bytes, filename: str) -> dict:
     crops = crop_detected_fields(image, result, run_dir)
     ocr = load_paddle_ocr()
     raw = {field: run_ocr_on_image(ocr, crop["path"]) for field, crop in crops.items()}
+    result_json = build_json_result(Path(filename).stem, raw)
+    result_json["evidence"] = {
+        "detected_fields": list(crops),
+        "regions": {field: {"box": crop["box"], "detection_confidence": crop["confidence"]}
+                    for field, crop in crops.items()},
+        "image_size": list(image.size),
+        "coordinate_space": "EXIF-normalized RGB image",
+    }
+    result_json["quality_gate"] = assess_receipt(result_json, detected_fields=list(crops))
+    result_json["multimodal_plan"] = review_plan(result_json, result_json["quality_gate"])
     output = {
         "digest": digest, "filename": filename, "payload": payload, "image": image,
         "detection": Image.fromarray(np.asarray(result.plot())[..., ::-1]),
-        "crops": crops, "result": build_json_result(Path(filename).stem, raw),
+        "crops": crops, "result": result_json,
     }
     st.session_state["receipt_analysis"] = output
     return output
