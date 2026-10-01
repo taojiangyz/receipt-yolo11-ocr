@@ -1,6 +1,6 @@
 from pathlib import Path
 import os
-from src.receipt_fields import normalize_store_name, extract_date, extract_amount
+from src.receipt_fields import normalize_store_name, extract_date, extract_amount, date_candidates
 import io
 import hashlib
 import uuid
@@ -19,6 +19,8 @@ LEGACY_MODEL_PATH = Path(
 )
 RUNTIME_DIR = Path(".streamlit_runtime")
 RUNTIME_DIR.mkdir(exist_ok=True)
+
+PIPELINE_VERSION = "2.0-date-recovery-1"
 
 FIELDS = ["store_name", "date", "total_amount", "items_area"]
 
@@ -47,6 +49,27 @@ def load_paddle_ocr():
         lang="japan",
         use_textline_orientation=True
     )
+
+
+def recover_date(raw_text, crop, run_dir, ocr):
+    """One local retry on a readable crop; retain initial OCR and unresolved ambiguity."""
+    if extract_date(raw_text) or len(date_candidates(raw_text)) > 1 or crop is None:
+        return None
+    from PIL import ImageOps
+    image = ImageOps.autocontrast(crop["image"].convert("L"))
+    scale = min(3.0, 2400 / max(image.size))
+    if scale > 1:
+        image = image.resize((round(image.width * scale), round(image.height * scale)), Image.Resampling.LANCZOS)
+    retry_path = run_dir / "date_retry.png"
+    image.save(retry_path)
+    try:
+        retry_raw = run_ocr_on_image(ocr, retry_path)
+        return {"source": "enhanced_date_crop", "raw": retry_raw,
+                "candidate": extract_date(retry_raw), "attempts": 1}
+    except Exception as exc:
+        # Optional recovery must not discard the rest of a successful receipt.
+        return {"source": "enhanced_date_crop", "raw": "", "candidate": "",
+                "attempts": 1, "error_type": type(exc).__name__}
 
 
 def expand_box_custom(x1, y1, x2, y2, img_w, img_h, left=0.05, right=0.05, top=0.05, bottom=0.05):
@@ -178,7 +201,7 @@ def analyze_image(payload: bytes, filename: str) -> dict:
     from PIL import ImageOps
     digest = hashlib.sha256(payload).hexdigest()
     cached = st.session_state.get("receipt_analysis")
-    if cached and cached["digest"] == digest:
+    if cached and cached["digest"] == digest and cached.get("pipeline_version") == PIPELINE_VERSION:
         cached = dict(cached, result=annotate_quality(cached["result"]))
         st.session_state["receipt_analysis"] = cached
         return cached
@@ -193,6 +216,11 @@ def analyze_image(payload: bytes, filename: str) -> dict:
     ocr = load_paddle_ocr()
     raw = {field: run_ocr_on_image(ocr, crop["path"]) for field, crop in crops.items()}
     result_json = build_json_result(Path(filename).stem, raw)
+    recovery = recover_date(raw.get("date", ""), crops.get("date"), run_dir, ocr)
+    if recovery is not None:
+        result_json["date_recovery"] = recovery
+        if recovery["candidate"]:
+            result_json["date_candidate"] = recovery["candidate"]
     result_json["evidence"] = {
         "detected_fields": list(crops),
         "regions": {field: {"box": crop["box"], "detection_confidence": crop["confidence"]}
@@ -202,7 +230,7 @@ def analyze_image(payload: bytes, filename: str) -> dict:
     }
     result_json = annotate_quality(result_json)
     output = {
-        "digest": digest, "filename": filename, "payload": payload, "image": image,
+        "pipeline_version": PIPELINE_VERSION, "digest": digest, "filename": filename, "payload": payload, "image": image,
         "detection": Image.fromarray(np.asarray(result.plot())[..., ::-1]),
         "crops": crops, "result": result_json,
     }

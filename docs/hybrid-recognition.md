@@ -88,3 +88,19 @@ model output separate from original OCR and show changed fields. Enforce one aut
 attempt per image/rules/model version, validate response schema, retain unresolved
 fields, and record latency/cost. Test both corrected errors and newly introduced
 errors; sample receipts passing the rules to measure missed errors.
+
+## Date recovery diagnostic
+
+The 49 archived missing-date outputs contained 10 separator-format cases now
+parseable, 38 incomplete/corrupted strings, and 1 empty string. Re-parsing all 102
+archived outputs yields 47 routing triggers, versus 57 with the prior parsing.
+These are recovered candidates and routing coverage, not field accuracy. Historical
+JSON files are not rewritten. A complete four-digit year is required; two-digit or
+truncated years remain unresolved. Multiple distinct dates are not silently selected.
+
+Current recognition attempts one local contrast/upscale retry on the date crop when
+parsing fails. `date_raw` retains the original OCR, and `date_recovery` records retry
+source, text and candidate (or error type). If the detector found no date crop, the
+system leaves the field for review; it does not pick an arbitrary date from the whole
+receipt. Other fields survive an OCR retry error. Cache entries carry a pipeline
+version so a changed recognition pipeline does not silently reuse older results.

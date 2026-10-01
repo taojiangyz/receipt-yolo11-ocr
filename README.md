@@ -36,6 +36,16 @@ Validation: `python -m unittest discover -s tests -v` covers field parsing,
 persistence, duplicate prevention, stale-edit rejection, audit history, CSV escaping,
 and the Streamlit review/save/edit/reopen workflow without rerunning inference.
 
+### Date extraction recovery
+
+Date parsing accepts fullwidth text and common OCR separator substitutions while
+requiring a complete four-digit year. It returns no candidate for invalid dates,
+truncated years or multiple distinct dates. It never guesses missing year digits.
+If the date remains absent and a date crop exists, the local pipeline tries one
+contrast-enhanced/upscaled crop. Initial OCR is retained in `date_raw`; retry text,
+candidate and source are recorded separately in `date_recovery`. Retry failures
+leave the receipt available for review. No whole-image date selection is attempted.
+
 ### Conditional multimodal review — routing stage
 
 The manager now shows a versioned quality check for missing/invalid fields,

@@ -20,16 +20,24 @@ def normalize_store_name(text: str) -> str:
     return ""
 
 
-def extract_date(text: str) -> str:
+def date_candidates(text: str) -> list[str]:
+    """Only complete four-digit years; never infer lost year digits or choose between dates."""
     from datetime import date
-    text = unicodedata.normalize("NFKC", text).replace(" ", "")
-    match = re.search(r"(20\d{2})[年/-](\d{1,2})[月/-](\d{1,2})", text)
-    if match:
+    text = unicodedata.normalize("NFKC", text)
+    # Japanese receipt separators may be OCR'd as parentheses. Digits stay unchanged.
+    pattern = r"(?<![0-9])(20[0-9]{2})\s*[年/().-]\s*([0-9]{1,2})\s*[月/().-]\s*([0-9]{1,2})(?![0-9])"
+    values = set()
+    for match in re.finditer(pattern, text):
         try:
-            return date(*map(int, match.groups())).isoformat()
+            values.add(date(*map(int, match.groups())).isoformat())
         except ValueError:
-            pass
-    return ""
+            continue
+    return sorted(values)
+
+
+def extract_date(text: str) -> str:
+    values = date_candidates(text)
+    return values[0] if len(values) == 1 else ""
 
 
 def extract_amount(text: str) -> str:
