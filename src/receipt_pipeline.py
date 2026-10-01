@@ -20,7 +20,7 @@ LEGACY_MODEL_PATH = Path(
 RUNTIME_DIR = Path(".streamlit_runtime")
 RUNTIME_DIR.mkdir(exist_ok=True)
 
-PIPELINE_VERSION = "2.0-date-recovery-1"
+PIPELINE_VERSION = "2.0-date-crop-2"
 
 FIELDS = ["store_name", "date", "total_amount", "items_area"]
 
@@ -63,7 +63,7 @@ def recover_date(raw_text, crop, run_dir, ocr):
     retry_path = run_dir / "date_retry.png"
     image.save(retry_path)
     try:
-        retry_raw = run_ocr_on_image(ocr, retry_path)
+        retry_raw = run_ocr_on_image(ocr, retry_path, date_crop=True)
         return {"source": "enhanced_date_crop", "raw": retry_raw,
                 "candidate": extract_date(retry_raw), "attempts": 1}
     except Exception as exc:
@@ -84,11 +84,17 @@ def expand_box_custom(x1, y1, x2, y2, img_w, img_h, left=0.05, right=0.05, top=0
     return x1, y1, x2, y2
 
 
-def run_ocr_on_image(ocr, image_path: Path) -> str:
+def run_ocr_on_image(ocr, image_path: Path, *, date_crop=False) -> str:
     if not image_path.exists():
         return ""
 
-    result = ocr.ocr(str(image_path))
+    # A narrow date crop is not a full document. Whole-page preprocessing
+    # corrupted leading year digits in the audited receipt crops.
+    if date_crop:
+        result = ocr.predict(str(image_path), use_doc_orientation_classify=False,
+                             use_doc_unwarping=False)
+    else:
+        result = ocr.ocr(str(image_path))
     texts = []
 
     if not result:
@@ -214,8 +220,13 @@ def analyze_image(payload: bytes, filename: str) -> dict:
                                       device="cpu", verbose=False)[0]
     crops = crop_detected_fields(image, result, run_dir)
     ocr = load_paddle_ocr()
-    raw = {field: run_ocr_on_image(ocr, crop["path"]) for field, crop in crops.items()}
+    raw = {field: run_ocr_on_image(ocr, crop["path"], date_crop=field == "date")
+           for field, crop in crops.items()}
     result_json = build_json_result(Path(filename).stem, raw)
+    result_json["ocr_config"] = {
+        "pipeline_version": PIPELINE_VERSION,
+        "date_crop": {"use_doc_orientation_classify": False, "use_doc_unwarping": False},
+    }
     recovery = recover_date(raw.get("date", ""), crops.get("date"), run_dir, ocr)
     if recovery is not None:
         result_json["date_recovery"] = recovery

@@ -7,7 +7,8 @@ YOLO/PaddleOCR remains the recognition engine. Versioned rules suggest one of:
 - `standard`: no current rule fires; this is not a correctness guarantee.
 - `multimodal_review`: missing/invalid required fields, missing detected regions,
   or ambiguous totals in merchant/date/total require image-based review. Item
-  text, item-region detection and item pairing never trigger review under rules 1.1.
+  text, item-region detection and item pairing never trigger review under rules 1.2.
+  Enhanced date candidates also require review, even when syntactically valid.
 - `retake`: an explicit observation says the image is unreadable. No automatic
   blur/glare/cropping detector has been implemented.
 
@@ -121,3 +122,11 @@ route it for date review. A syntactically valid recovered date is not accepted a
 proof of correctness. The three verified recoveries are `lawson_013_c` (2026-06-20),
 `mybasket_001_a` and `mybasket_014_c` (both 2026-06-16). The other 36 remain candidates
 for multimodal review or manual correction. Original OCR remains unchanged.
+
+## 2.0 release configuration
+
+The follow-up bounded comparison disabled full-document orientation and unwarping
+for date crops only. Original crops then matched all 39 visually read dates. This
+supersedes the default-preprocessing diagnostic as the released date configuration;
+it does not change its historical findings. See [method, limits and results](date-crop-diagnostic.md).
+Saved historical OCR is not rewritten. External multimodal calls remain unimplemented.

@@ -1,10 +1,10 @@
-# Japanese Receipt Intelligence — YOLO11 + PaddleOCR
+# Japanese Receipt Intelligence 2.0 — YOLO11 + PaddleOCR
 
 [English](README.md) | [日本語](README.ja.md)
 
-An end-to-end document AI prototype that detects key fields in Japanese convenience-store receipts, applies OCR only to the detected regions, and returns structured JSON.
+A local Japanese receipt manager: detect fields with YOLO11, read them with PaddleOCR, review merchant/date/total, and save, search and export receipts. The original 1.0 recognition laboratory and detector results are preserved.
 
-## 2.0 — local receipt manager (development)
+## 2.0 — local receipt manager (MVP)
 
 The original recognition laboratory remains available in the sidebar. The new default
 page adds a local workflow: upload → recognize → review → save → search → CSV export.
@@ -29,8 +29,9 @@ item parser now proposes name/line-total pairs; quantities, unit prices, discoun
 and tax rates are not inferred. Existing evaluation metrics below are
 **1.0 detector results**, not new 2.0 OCR accuracy claims.
 
-The original implementation is preserved at commit `1135fa1` and local tag
-`v1.0-baseline-1135fa1`. The 2.0 development branch is `feature/receipt-manager-v2`.
+The original implementation is preserved at commit `1135fa1` and tag
+`v1.0-baseline-1135fa1`. The 2.0 release is tagged `v2.0.0`; model weights remain in the existing `v1.0.0` release.
+See [release notes and validation](docs/releases/v2.0.0.md) and the [walkthrough](docs/manager-walkthrough.md).
 
 Validation: `python -m unittest discover -s tests -v` covers field parsing,
 persistence, duplicate prevention, stale-edit rejection, audit history, CSV escaping,
@@ -38,13 +39,20 @@ and the Streamlit review/save/edit/reopen workflow without rerunning inference.
 
 ### Date extraction recovery
 
+Date crops bypass whole-document orientation classification and unwarping; other
+fields keep their existing OCR behavior. On a selected set of 39 previously failed
+date crops (23 physical receipts), this configuration recovered 39 dates matching
+Codex visual readings. These labels are not independently verified and the sample
+is not a held-out accuracy benchmark. See the [diagnostic](docs/date-crop-diagnostic.md).
+
 Date parsing accepts fullwidth text and common OCR separator substitutions while
 requiring a complete four-digit year. It returns no candidate for invalid dates,
 truncated years or multiple distinct dates. It never guesses missing year digits.
 If the date remains absent and a date crop exists, the local pipeline tries one
 contrast-enhanced/upscaled crop. Initial OCR is retained in `date_raw`; retry text,
 candidate and source are recorded separately in `date_recovery`. Retry failures
-leave the receipt available for review. No whole-image date selection is attempted.
+leave the receipt available for review. Enhanced candidates always require date
+review, even when their format is valid. No whole-image date selection is attempted.
 
 ### Conditional multimodal review — routing stage
 
@@ -89,7 +97,13 @@ The filtered library exports both receipt CSV (item rows encoded as JSON) and a 
 item CSV with one row per item and its receipt review status. Audit history includes
 item edits. This feature has **not** been evaluated against item-level ground truth.
 
-## Product demo
+## 2.0 manager preview
+
+![Receipt history and export](assets/demo/receipt_manager_v2.png)
+
+Synthetic demonstration record; this screenshot illustrates the UI, not OCR accuracy.
+
+## Original 1.0 recognition demo
 
 ![Upload-to-JSON Streamlit demo](assets/demo/streamlit_upload_demo.gif)
 
@@ -187,7 +201,9 @@ RECEIPT_MODEL_PATH=/path/to/best.pt streamlit run streamlit_app.py
 }
 ```
 
-`items_area` remains raw OCR text in the MVP. Product-level parsing into name, quantity, unit price, discount, and tax category is outside the current scope.
+The JSON retains raw item text. The 2.0 manager separately proposes conservative
+name/line-total pairs for review; quantity, unit price, discount and tax-category
+inference remain outside the current scope.
 
 ## Engineering decisions
 
@@ -205,7 +221,9 @@ RECEIPT_MODEL_PATH=/path/to/best.pt streamlit run streamlit_app.py
 - Only 65 physical receipts; broader store, device, lighting, and layout coverage is needed.
 - OCR has qualitative validation but no labeled field-level accuracy benchmark yet.
 - Total extraction uses conservative rules and still needs confidence calibration.
-- Tilt correction and item-level parsing are not implemented.
+- Date crops skip document preprocessing; difficult rotations and unreadable photos may still need manual correction.
+- Item pairing is conservative and has no item-level accuracy benchmark.
+- Multimodal routing is implemented; external model calls are not connected.
 - The Streamlit app is a local prototype without authentication, monitoring, or cloud deployment.
 
 The next evaluation milestone is a receipt-grouped held-out test set with field exact match, character error rate, total-amount accuracy, and end-to-end latency.
@@ -213,7 +231,13 @@ The next evaluation milestone is a receipt-grouped held-out test set with field 
 ## Repository layout
 
 ```text
-streamlit_app.py                 End-to-end demo
+streamlit_app.py                 Two-page application
+pages/lab.py                    Original recognition laboratory
+pages/manager.py                Receipt review and library
+src/receipt_pipeline.py         Shared detection/OCR pipeline
+src/receipt_store.py            SQLite originals, corrections and history
+src/receipt_quality.py          Core-field review routing
+tests/                          Automated regression checks
 download_model.py               Verified model download
 src/split_yolo_dataset_by_receipt.py
 src/predict_and_crop.py         Detection and crop CLI
