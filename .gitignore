@@ -27,3 +27,6 @@ outputs/
 README_backup*.md
 README_before_*.md
 *.mov
+
+# Local receipt library (images, OCR and review history)
+.receipt_library/

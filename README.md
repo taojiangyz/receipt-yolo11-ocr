@@ -4,6 +4,37 @@
 
 An end-to-end document AI prototype that detects key fields in Japanese convenience-store receipts, applies OCR only to the detected regions, and returns structured JSON.
 
+## 2.0 — local receipt manager (development)
+
+The original recognition laboratory remains available in the sidebar. The new default
+page adds a local workflow: upload → recognize → review → save → search → CSV export.
+Both pages share the same recognition pipeline. Editing and navigation reuse the
+last successful recognition in the current session; they do not rerun OCR.
+
+- **1.0 · 识别实验室**: source image, detection boxes, field crops, OCR and JSON export.
+- **2.0 · 票据管理**: editable merchant/date/JPY total/items/category, review status,
+  date and text filters, and CSV export of the filtered results.
+- Original uploaded image bytes, raw OCR candidates, corrected values and change history
+  are stored together in SQLite. Identical image bytes cannot be saved twice; this
+  does not detect different photos of the same physical receipt.
+- Missing fields may be saved as pending review. Reviewed receipts require a merchant,
+  valid date and integer JPY amount. These checks do not guarantee OCR correctness.
+- Storage defaults to `.receipt_library/receipts.sqlite3` (Git-ignored). Set
+  `RECEIPT_LIBRARY_DIR` to choose another local directory. Back up this directory
+  while the app is stopped; it contains the original images and review history.
+
+Run with the existing command: `streamlit run streamlit_app.py`. This is a local,
+single-user application; authentication, cloud sync, item-level parsing and OCR
+accuracy benchmarking remain future work. Existing evaluation metrics below are
+**1.0 detector results**, not new 2.0 OCR accuracy claims.
+
+The original implementation is preserved at commit `1135fa1` and local tag
+`v1.0-baseline-1135fa1`. The 2.0 development branch is `feature/receipt-manager-v2`.
+
+Validation: `python -m unittest discover -s tests -v` covers field parsing,
+persistence, duplicate prevention, stale-edit rejection, audit history, CSV escaping,
+and the Streamlit review/save/edit/reopen workflow without rerunning inference.
+
 ## Product demo
 
 ![Upload-to-JSON Streamlit demo](assets/demo/streamlit_upload_demo.gif)

@@ -5,6 +5,11 @@ import re
 
 from paddleocr import PaddleOCR
 
+try:
+    from .receipt_fields import normalize_store_name, extract_date, extract_amount
+except ImportError:
+    from receipt_fields import normalize_store_name, extract_date, extract_amount
+
 
 def run_ocr_on_image(ocr, image_path: Path) -> str:
     if not image_path.exists():
@@ -33,83 +38,6 @@ def run_ocr_on_image(ocr, image_path: Path) -> str:
                     continue
 
     return "\n".join(texts)
-
-
-def normalize_store_name(text: str) -> str:
-    if not text:
-        return ""
-
-    raw = text.replace(" ", "").replace("\n", "")
-    lower = raw.lower()
-
-    if "familymart" in lower or "family" in lower:
-        return "FamilyMart"
-
-    if "lawson" in lower or "ローソン" in raw:
-        return "LAWSON"
-
-    if (
-        "セブン" in raw
-        or "イレブン" in raw
-        or "7-eleven" in lower
-        or "seven" in lower
-    ):
-        return "7-Eleven"
-
-    if (
-        "mybasket" in lower
-        or "mybasket" in lower
-        or "まいばす" in raw
-        or "まいはす" in raw
-        or "まいほす" in raw
-    ):
-        return "MyBasket"
-
-    return text
-
-
-def extract_amount(text: str) -> str:
-    if not text:
-        return ""
-
-    # Normalize symbols and spaces
-    t = text.replace("￥", "¥")
-    t = t.replace(" ", "").replace("\n", "")
-
-    # Strong pattern: ¥1,020 / ¥610 / ¥181
-    yen_matches = re.findall(r"¥\d{1,3}(?:,\d{3})*|¥\d{3,6}", t)
-    if yen_matches:
-        # Prefer the longest candidate
-        cand = sorted(yen_matches, key=len, reverse=True)[0]
-        return cand.replace("¥", "").replace(",", "")
-
-    # Weak fallback: plain 3-6 digit number
-    nums = re.findall(r"\d{3,6}", t)
-    if nums:
-        return sorted(nums, key=len, reverse=True)[0].replace(",", "")
-
-    return ""
-
-
-def extract_date(text: str) -> str:
-    if not text:
-        return ""
-
-    t = text.replace(" ", "").replace("\n", "")
-
-    # Pattern 1: 2026年6月23日
-    m = re.search(r"(20\d{2})年(\d{1,2})月(\d{1,2})日", t)
-    if m:
-        year, month, day = m.groups()
-        return f"{year}-{int(month):02d}-{int(day):02d}"
-
-    # Pattern 2: 2026/6/16
-    m = re.search(r"(20\d{2})/(\d{1,2})/(\d{1,2})", t)
-    if m:
-        year, month, day = m.groups()
-        return f"{year}-{int(month):02d}-{int(day):02d}"
-
-    return ""
 
 
 def main():
