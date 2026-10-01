@@ -5,7 +5,7 @@ from datetime import date
 from src.receipt_fields import extract_amount
 from src.receipt_items import parse_items, reconcile, SPECIAL
 
-RULES_VERSION = '1.0'
+RULES_VERSION = '1.1'
 REQUIRED = {'store_name': '商户', 'date': '日期', 'total_amount': '合计金额'}
 
 
@@ -49,11 +49,11 @@ def assess_receipt(raw, *, detected_fields=None, image_problem=None):
     ambiguous = [line for line in parsed['unmatched']
                  if not SPECIAL.search(line) and not re.fullmatch(r'\s*[0-9]+(?:個|点|本|袋)\s*', line)]
     if not items.strip():
-        add('items_missing', 'items_area', '商品区域没有识别文字')
+        advisories.append(dict(code='items_missing', message='商品区域没有识别文字，不触发补救'))
     elif ambiguous:
-        add('items_unpaired', 'items_area', '商品名与价格无法可靠配对', '\n'.join(ambiguous))
+        advisories.append(dict(code='items_unpaired', message='商品名与价格无法可靠配对，仅供人工核对，不触发补救'))
     if detected_fields is not None and 'items_area' not in detected_fields:
-        add('region_missing_items_area', 'items_area', '未检测到商品区域，补救时应查看原图')
+        advisories.append(dict(code='region_missing_items_area', message='未检测到商品区域，不触发补救'))
     comparison = reconcile(parsed['rows'], candidate)
     if comparison['state'] == 'difference':
         advisories.append(dict(code='amount_difference', message=comparison['message']))
@@ -71,5 +71,14 @@ def review_plan(raw, assessment):
                 status='not_called', target_fields=assessment['target_fields'],
                 reasons=assessment['reasons'],
                 required_evidence=['original_image', 'available_field_crops', 'ocr_candidates'],
-                ocr_candidates={k: v for k, v in raw.items() if k.endswith(('_raw', '_candidate')) or k == 'items_text'},
-                instructions='对照原图与裁剪图核对指定字段。OCR仅为候选。无法确定时返回空值和原因；不可为了匹配总额编造或修改商品价格。')
+                ocr_candidates={k: v for k, v in raw.items() if k in {field + suffix for field in REQUIRED for suffix in ('_raw', '_candidate')}},
+                instructions='只核对店名、日期和总金额中的指定字段，不要求识别商品明细。对照原图与相关裁剪图，OCR仅为候选。无法确定时返回空值和原因，不得编造。')
+
+
+def annotate_quality(raw):
+    """Apply current policy to candidates without mutating stored historical reports."""
+    updated = dict(raw)
+    gate = assess_receipt(raw, detected_fields=raw.get('evidence', {}).get('detected_fields'))
+    updated['quality_gate'] = gate
+    updated['multimodal_plan'] = review_plan(raw, gate)
+    return updated

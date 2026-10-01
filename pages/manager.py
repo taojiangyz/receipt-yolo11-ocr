@@ -27,7 +27,7 @@ def editor(values, image, raw, key, *, analysis=None, record=None):
             st.json(raw)
     with right:
         st.subheader("核对票据信息")
-        assessment = raw.get("quality_gate") or assess_receipt(raw)
+        assessment = assess_receipt(raw, detected_fields=raw.get("evidence", {}).get("detected_fields"))
         with st.expander("识别质量检查", expanded=assessment["needs_multimodal"]):
             if assessment["needs_multimodal"]:
                 st.warning("建议多模态补救（模型尚未接入，本次未发送图片）")
@@ -39,7 +39,7 @@ def editor(values, image, raw, key, *, analysis=None, record=None):
                 st.write("• " + reason["message"])
             for advisory in assessment["advisories"]:
                 st.caption(advisory["message"])
-            st.caption("检查基于原始识别结果，保留为审计依据；人工修改不会覆盖原始检查。")
+            st.caption("当前规则只对店名、日期、总金额判断补救；商品明细仅提示。基于原始 OCR 重新检查，历史报告保持不变。")
         st.caption("识别结果是候选值，请对照原图。缺失字段可先留空，保存为待核对。")
         parsed = parse_items(values["items"])
         if parsed["unmatched"]:

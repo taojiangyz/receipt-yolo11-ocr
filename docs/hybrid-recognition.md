@@ -6,11 +6,12 @@ YOLO/PaddleOCR remains the recognition engine. Versioned rules suggest one of:
 
 - `standard`: no current rule fires; this is not a correctness guarantee.
 - `multimodal_review`: missing/invalid required fields, missing detected regions,
-  ambiguous totals, or unpaired/missing item text require image-based review.
+  or ambiguous totals in merchant/date/total require image-based review. Item
+  text, item-region detection and item pairing never trigger review under rules 1.1.
 - `retake`: an explicit observation says the image is unreadable. No automatic
   blur/glare/cropping detector has been implemented.
 
-Item/total differences alone are advisory: taxes, discounts and incomplete item
+All item-related issues and item/total differences are advisory: taxes, discounts and incomplete item
 extraction can explain differences. Correctly labelled cash/change values do not
 by themselves trigger a total conflict. YOLO confidence is detection evidence,
 not OCR confidence.
@@ -25,8 +26,10 @@ if runtime files are missing.
 **There is no external model adapter yet.** `multimodal_plan.status=not_called`
 and `max_automatic_attempts=1` describe the planned policy, not an executed request
 or implemented retry counter. No API credentials are required for this stage.
-The manager displays reasons from the original recognition even after manual edits.
-Older saved receipts are assessed on read without overwriting their original JSON.
+The manager applies the current rules to original OCR on read, including older
+saved receipts. Stored historical reports remain unchanged. Cached inference also
+refreshes its routing report without repeating OCR. Model review targets only
+merchant, date and total; item text is excluded from the planned candidate payload.
 
 ## Annotation workflow
 
@@ -69,9 +72,10 @@ and reserve newly collected receipt groups for a final unbiased evaluation.
 
 ## Initial diagnostic, 2026-10-01
 
-Across 102 archived OCR JSON files, 97 trigger review and 5 pass the rules.
-Reasons overlap: 84 unpaired item outputs, 49 missing dates, 17 missing totals,
-and 1 invalid date. This is historical routing coverage, **not accuracy** and not
+Under rules 1.0, 97 of 102 archived outputs triggered review. Rules 1.1 remove
+item-based triggers: 57 now trigger review and 45 pass the rules. Reasons overlap:
+49 missing dates, 17 missing totals and 1 invalid date. This removes 40 review
+triggers without changing any original recognition result. This is historical routing coverage, **not accuracy** and not
 a benchmark of the current OCR runtime. It does not demonstrate cost savings.
 The prepared truth manifest contains zero reviewed annotations. Re-run current
 recognition and review truth before adjusting thresholds or claiming improvements.

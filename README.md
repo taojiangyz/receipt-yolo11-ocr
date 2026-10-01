@@ -39,14 +39,16 @@ and the Streamlit review/save/edit/reopen workflow without rerunning inference.
 ### Conditional multimodal review — routing stage
 
 The manager now shows a versioned quality check for missing/invalid fields,
-conflicting totals and ambiguous item pairing. Original OCR, crop coordinates and
+conflicting totals in merchant/date/total only. Item pairing, missing item text
+and item-total differences are advisory and never trigger model review. Original OCR, crop coordinates and
 routing reasons are preserved. A local review plan is prepared, but **no external
 multimodal model has been connected or called**. Total differences alone are advisory.
 
 See [hybrid recognition and evaluation](docs/hybrid-recognition.md) for annotation
 commands, metrics and limitations. An unreviewed manifest never produces an accuracy
-claim. Initial historical routing coverage is high (97/102), so cost savings are not
-yet established.
+claim. Under rules 1.1, 57/102 historical outputs trigger review (previously 97/102
+when item pairing was included). These are routing counts, not accuracy or proven
+cost savings.
 
 ### Batch processing
 

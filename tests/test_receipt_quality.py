@@ -1,5 +1,5 @@
 import unittest
-from src.receipt_quality import assess_receipt, review_plan
+from src.receipt_quality import assess_receipt, review_plan, annotate_quality
 from src.receipt_evaluation import evaluate
 
 
@@ -27,12 +27,27 @@ class QualityTests(unittest.TestCase):
         self.assertIn('region_missing_date', self.codes(baseline(), detected_fields=['store_name','total_amount','items_area']))
 
     def test_items_ambiguity_tax_advisory_and_retake(self):
-        self.assertIn('items_unpaired', self.codes(baseline(items_text='牛乳\nパン\n¥80\n¥100')))
+        for items in ('', '牛乳\nパン\n¥80\n¥100'):
+            gate = assess_receipt(baseline(items_text=items), detected_fields=['store_name', 'date', 'total_amount'])
+            self.assertEqual(gate['route'], 'standard')
+            self.assertEqual(gate['target_fields'], [])
+            self.assertTrue(gate['advisories'])
         gate = assess_receipt(baseline(total_amount_candidate='198', total_amount_raw='合計 ¥198',
                                        items_text='牛乳\n¥180\n消費税 ¥18'))
         self.assertEqual(gate['route'], 'standard')
         self.assertEqual(gate['advisories'][0]['code'], 'amount_difference')
         self.assertEqual(assess_receipt(baseline(), image_problem='反光遮挡金额')['route'], 'retake')
+
+    def test_old_policy_report_is_not_reused_or_mutated(self):
+        raw = baseline(items_text='')
+        raw['quality_gate'] = {'rules_version': '1.0', 'needs_multimodal': True}
+        result = annotate_quality(raw)
+        self.assertEqual(result['quality_gate']['rules_version'], '1.1')
+        self.assertFalse(result['quality_gate']['needs_multimodal'])
+        self.assertTrue(raw['quality_gate']['needs_multimodal'])
+        gate = assess_receipt(baseline(date_candidate='', items_text=''))
+        self.assertEqual(gate['target_fields'], ['date'])
+        self.assertNotIn('items_text', review_plan(raw, gate)['ocr_candidates'])
 
     def test_plan_is_not_an_external_call(self):
         raw = baseline(date_candidate='')

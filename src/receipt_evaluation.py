@@ -71,7 +71,7 @@ def evaluate(manifest, predictions):
                 core_error_routing_recall=routed_errors / erroneous if erroneous else None,
                 missed_core_error_images=erroneous - routed_errors,
                 routed_without_core_error=clean_routed,
-                note='未审核样本不计分；多视角图片并非独立实体小票。核心字段无误的触发仍可能来自商品明细问题，不能直接判为误触发。')
+                note='未审核样本不计分；多视角图片并非独立实体小票。当前补救只检查三个核心字段；其他保守检查仍可能触发，需逐例核对。')
 
 
 def prediction_files(directory):

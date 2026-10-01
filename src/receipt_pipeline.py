@@ -4,7 +4,7 @@ from src.receipt_fields import normalize_store_name, extract_date, extract_amoun
 import io
 import hashlib
 import uuid
-from src.receipt_quality import assess_receipt, review_plan
+from src.receipt_quality import annotate_quality
 
 import numpy as np
 import streamlit as st
@@ -179,6 +179,8 @@ def analyze_image(payload: bytes, filename: str) -> dict:
     digest = hashlib.sha256(payload).hexdigest()
     cached = st.session_state.get("receipt_analysis")
     if cached and cached["digest"] == digest:
+        cached = dict(cached, result=annotate_quality(cached["result"]))
+        st.session_state["receipt_analysis"] = cached
         return cached
     image = ImageOps.exif_transpose(Image.open(io.BytesIO(payload))).convert("RGB")
     run_dir = RUNTIME_DIR / uuid.uuid4().hex
@@ -198,8 +200,7 @@ def analyze_image(payload: bytes, filename: str) -> dict:
         "image_size": list(image.size),
         "coordinate_space": "EXIF-normalized RGB image",
     }
-    result_json["quality_gate"] = assess_receipt(result_json, detected_fields=list(crops))
-    result_json["multimodal_plan"] = review_plan(result_json, result_json["quality_gate"])
+    result_json = annotate_quality(result_json)
     output = {
         "digest": digest, "filename": filename, "payload": payload, "image": image,
         "detection": Image.fromarray(np.asarray(result.plot())[..., ::-1]),
