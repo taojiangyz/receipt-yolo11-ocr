@@ -42,12 +42,20 @@ class QualityTests(unittest.TestCase):
         raw = baseline(items_text='')
         raw['quality_gate'] = {'rules_version': '1.0', 'needs_multimodal': True}
         result = annotate_quality(raw)
-        self.assertEqual(result['quality_gate']['rules_version'], '1.1')
+        self.assertEqual(result['quality_gate']['rules_version'], '1.2')
         self.assertFalse(result['quality_gate']['needs_multimodal'])
         self.assertTrue(raw['quality_gate']['needs_multimodal'])
         gate = assess_receipt(baseline(date_candidate='', items_text=''))
         self.assertEqual(gate['target_fields'], ['date'])
         self.assertNotIn('items_text', review_plan(raw, gate)['ocr_candidates'])
+
+    def test_enhanced_date_needs_review_even_if_format_is_valid(self):
+        raw = baseline(date_candidate='2020-06-19')
+        raw['date_recovery'] = {'candidate': '2020-06-19', 'raw': '2020年6月19日'}
+        gate = assess_receipt(raw)
+        self.assertTrue(gate['needs_multimodal'])
+        self.assertIn('date_recovery_unverified', {r['code'] for r in gate['reasons']})
+        self.assertEqual(gate['target_fields'], ['date'])
 
     def test_plan_is_not_an_external_call(self):
         raw = baseline(date_candidate='')

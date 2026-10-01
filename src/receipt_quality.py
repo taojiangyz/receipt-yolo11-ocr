@@ -5,7 +5,7 @@ from datetime import date
 from src.receipt_fields import extract_amount
 from src.receipt_items import parse_items, reconcile, SPECIAL
 
-RULES_VERSION = '1.1'
+RULES_VERSION = '1.2'
 REQUIRED = {'store_name': '商户', 'date': '日期', 'total_amount': '合计金额'}
 
 
@@ -44,6 +44,11 @@ def assess_receipt(raw, *, detected_fields=None, image_problem=None):
     labeled = set(re.findall(r'(?:合計|総計)\s*[¥￥]?\s*([0-9]+)', text))
     if len(labeled) > 1 and not any(r['code'] == 'amount_conflict' for r in reasons):
         add('amount_conflict', 'total_amount', '存在互相冲突的合计金额', text)
+    recovery = raw.get('date_recovery') or {}
+    if recovery.get('candidate'):
+        add('date_recovery_unverified', 'date',
+            '增强识别产生了日期候选，需对照原图确认，不能仅凭格式合法接受',
+            str(recovery.get('raw', '')))
     items = str(raw.get('items_text') or '')
     parsed = parse_items(items)
     ambiguous = [line for line in parsed['unmatched']

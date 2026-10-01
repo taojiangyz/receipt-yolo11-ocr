@@ -104,3 +104,20 @@ source, text and candidate (or error type). If the detector found no date crop, 
 system leaves the field for review; it does not pick an arbitrary date from the whole
 receipt. Other fields survive an OCR retry error. Cache entries carry a pipeline
 version so a changed recognition pipeline does not silently reuse older results.
+
+## Audited retry results and rules 1.2
+
+The remaining 39 archived failures (23 physical receipts) were each processed on
+original and enhanced saved date crops, for 78 OCR passes. Codex visually read all
+39 crops; these labels have not been independently verified by the user. All date
+strings were visually readable, so no crop in this diagnostic required retaking.
+Original-crop OCR produced no parseable dates. Enhanced OCR produced four candidates:
+three matched the visible dates, while `lawson_002_b` incorrectly changed 2026-06-19
+to 2020-06-19. The other 35 remained blank. This is a selected failure-set diagnostic,
+not overall accuracy or a comparison of all possible OCR configurations.
+
+Rules 1.2 therefore treat every nonempty enhanced date recovery as unverified and
+route it for date review. A syntactically valid recovered date is not accepted as
+proof of correctness. The three verified recoveries are `lawson_013_c` (2026-06-20),
+`mybasket_001_a` and `mybasket_014_c` (both 2026-06-16). The other 36 remain candidates
+for multimodal review or manual correction. Original OCR remains unchanged.
