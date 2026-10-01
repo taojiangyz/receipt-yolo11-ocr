@@ -46,6 +46,25 @@ class ManagerUITests(unittest.TestCase):
                 self.assertEqual(reopened.text_input[3].value, '630')
                 self.assertFalse(reopened.exception)
 
+    def test_item_table_edit_is_saved_and_audited(self):
+        from pathlib import Path
+        from src.receipt_store import candidates
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {'RECEIPT_LIBRARY_DIR': tmp}):
+            image = io.BytesIO()
+            Image.new('RGB', (10, 10)).save(image, format='PNG')
+            store = ReceiptStore(Path(tmp) / 'receipts.sqlite3')
+            raw = {'items_text': '牛乳\n¥180', 'total_amount_candidate': '180'}
+            rid = store.save(candidates(raw), payload=image.getvalue(), filename='test.png', raw=raw)
+            app = AppTest.from_file('pages/manager.py').run()
+            app.radio[0].set_value('历史票据').run()
+            app.session_state[f'edit_{rid}_1_items'] = {
+                'edited_rows': {0: {'line_total': '190'}}, 'added_rows': [], 'deleted_rows': []}
+            app.button[0].click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(store.get(rid)['values']['line_items'][0]['line_total'], '190')
+            self.assertEqual(store.history(rid)[0]['before']['line_items'][0]['line_total'], '180')
+            self.assertEqual(store.get(rid)['raw'], raw)
+
 
 if __name__ == '__main__':
     unittest.main()
