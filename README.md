@@ -24,8 +24,9 @@ last successful recognition in the current session; they do not rerun OCR.
   while the app is stopped; it contains the original images and review history.
 
 Run with the existing command: `streamlit run streamlit_app.py`. This is a local,
-single-user application; authentication, cloud sync, item-level parsing and OCR
-accuracy benchmarking remain future work. Existing evaluation metrics below are
+single-user application; authentication, cloud sync and OCR accuracy benchmarking remain future work. A conservative
+item parser now proposes name/line-total pairs; quantities, unit prices, discounts
+and tax rates are not inferred. Existing evaluation metrics below are
 **1.0 detector results**, not new 2.0 OCR accuracy claims.
 
 The original implementation is preserved at commit `1135fa1` and local tag
@@ -34,6 +35,22 @@ The original implementation is preserved at commit `1135fa1` and local tag
 Validation: `python -m unittest discover -s tests -v` covers field parsing,
 persistence, duplicate prevention, stale-edit rejection, audit history, CSV escaping,
 and the Streamlit review/save/edit/reopen workflow without rerunning inference.
+
+### Item review and reconciliation
+
+The manager includes an editable item table (name and line total in integer JPY).
+It proposes candidates from unambiguous name/price sequences and inline currency
+amounts. Grouped names/prices and unsupported lines are shown for manual review.
+Tax, payment and discount rows are not automatically included. Raw OCR text is
+retained, and existing receipts without item rows can still be opened and edited.
+
+The page compares the sum of entered item totals with the receipt total. A difference
+is advisory: it can come from missing items, taxes, discounts or OCR errors. A match
+does not establish correct item pairing. Saving updates the comparison; changes to
+the text do not regenerate the editable table. Users may add, correct or remove rows.
+The filtered library exports both receipt CSV (item rows encoded as JSON) and a separate
+item CSV with one row per item and its receipt review status. Audit history includes
+item edits. This feature has **not** been evaluated against item-level ground truth.
 
 ## Product demo
 

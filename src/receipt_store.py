@@ -11,6 +11,8 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 FIELDS = ("store", "date", "amount", "items", "category", "status")
+from src.receipt_items import parse_items, normalize_items
+
 STATUSES = ("待核对", "已核对")
 
 
@@ -37,7 +39,7 @@ def validate(values):
 def candidates(raw):
     return dict(store=raw.get("store_name_candidate", ""), date=raw.get("date_candidate", ""),
                 amount=raw.get("total_amount_candidate", ""), items=raw.get("items_text", ""),
-                category="未分类", status="待核对")
+                category="未分类", status="待核对", line_items=parse_items(raw.get("items_text", ""))["rows"])
 
 
 class ReceiptStore:
@@ -75,7 +77,9 @@ class ReceiptStore:
         return row["id"] if row else None
 
     def save(self, values, *, payload=None, filename="", raw=None, receipt_id=None, revision=None):
+        line_items = normalize_items(values.get("line_items", []))
         values = {field: str(values.get(field, "")).strip() for field in FIELDS}
+        values["line_items"] = line_items
         errors = validate(values)
         if errors:
             raise ValueError("；".join(errors))
@@ -143,12 +147,30 @@ class ReceiptStore:
 
 def export_csv(rows):
     output = io.StringIO(newline="")
-    fields = ("id", "filename", *FIELDS, "updated_at")
+    fields = ("id", "filename", *FIELDS, "line_items", "updated_at")
     writer = csv.DictWriter(output, fieldnames=fields)
     writer.writeheader()
     for row in rows:
+        row = dict(row, line_items=json.dumps(row.get("line_items", []), ensure_ascii=False))
         # Avoid interpreting untrusted OCR text as a spreadsheet formula.
         safe = {key: ("'" + str(row.get(key, "")) if str(row.get(key, "")).lstrip().startswith(("=", "+", "-", "@"))
                       or str(row.get(key, "")).startswith(("\t", "\r", "\n")) else row.get(key, "")) for key in fields}
         writer.writerow(safe)
+    return output.getvalue().encode("utf-8-sig")
+
+
+def export_items_csv(rows):
+    """One reviewed/candidate item per row, linked to the receipt's review status."""
+    output = io.StringIO(newline="")
+    fields = ("receipt_id", "store", "date", "status", "name", "line_total")
+    writer = csv.DictWriter(output, fieldnames=fields)
+    writer.writeheader()
+    for receipt in rows:
+        for item in receipt.get("line_items", []):
+            row = dict(receipt_id=receipt["id"], store=receipt["store"], date=receipt["date"],
+                       status=receipt["status"], **item)
+            for field in fields:
+                value = str(row.get(field, ""))
+                row[field] = "'" + value if value.lstrip().startswith(("=", "+", "-", "@")) or value.startswith(("\t", "\r", "\n")) else value
+            writer.writerow(row)
     return output.getvalue().encode("utf-8-sig")

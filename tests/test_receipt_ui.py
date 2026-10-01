@@ -18,7 +18,7 @@ class ManagerUITests(unittest.TestCase):
             app.session_state['receipt_analysis'] = dict(
                 digest='fixture', filename='sample.png', payload=buf.getvalue(), image=image,
                 result=dict(store_name_candidate='LAWSON', date_candidate='2026-06-23',
-                            total_amount_candidate='610', items_text='牛乳'))
+                            total_amount_candidate='610', items_text='牛乳\n¥610'))
             with patch('src.receipt_pipeline.analyze_image', side_effect=AssertionError('Unexpected inference')):
                 app.run()
                 self.assertFalse(app.exception)
@@ -37,6 +37,8 @@ class ManagerUITests(unittest.TestCase):
                 store = ReceiptStore(Path(tmp) / 'receipts.sqlite3')
                 row = store.list()[0]
                 self.assertEqual(row['amount'], '630')
+                self.assertEqual(row['line_items'], [{'name': '牛乳', 'line_total': '610'}])
+                self.assertTrue(any('差额' in x.value for x in app.warning))
                 self.assertEqual(store.get(row['id'])['raw']['total_amount_candidate'], '610')
                 self.assertEqual(len(store.history(row['id'])), 2)
                 reopened = AppTest.from_file('pages/manager.py').run()

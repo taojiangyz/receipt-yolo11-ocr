@@ -1,16 +1,21 @@
 import os
 import hashlib
+import pandas as pd
+from src.receipt_items import parse_items, normalize_items, reconcile
 from datetime import date
 from pathlib import Path
 import streamlit as st
 from src.receipt_pipeline import analyze_image
-from src.receipt_store import ReceiptStore, candidates, export_csv
+from src.receipt_store import ReceiptStore, candidates, export_csv, export_items_csv
 
 store = ReceiptStore(Path(os.getenv("RECEIPT_LIBRARY_DIR", ".receipt_library")) / "receipts.sqlite3")
 st.title("2.0 · 票据管理")
 st.caption("识别后核对，保存后随时查找。金额单位：日元。数据保存在本机。")
 if st.session_state.pop("receipt_saved", False):
     st.success("票据已保存，原始识别结果与修改记录均已保留。")
+    comparison = st.session_state.pop("receipt_comparison", None)
+    if comparison:
+        st.warning(comparison["message"]) if comparison["state"] == "difference" else st.info(comparison["message"])
 
 
 def editor(values, image, raw, key, *, analysis=None, record=None):
@@ -22,6 +27,12 @@ def editor(values, image, raw, key, *, analysis=None, record=None):
     with right:
         st.subheader("核对票据信息")
         st.caption("识别结果是候选值，请对照原图。缺失字段可先留空，保存为待核对。")
+        parsed = parse_items(values["items"])
+        if parsed["unmatched"]:
+            st.warning("部分文字无法可靠配对为商品与金额，请对照原图补充。税额和折扣不会自动计入商品行。")
+            with st.expander("未自动配对的文字"):
+                st.text("\n".join(parsed["unmatched"]))
+        initial_rows = values.get("line_items", parsed["rows"])
         with st.form(key):
             updated = {
                 "store": st.text_input("商户", value=values["store"]),
@@ -31,17 +42,34 @@ def editor(values, image, raw, key, *, analysis=None, record=None):
                 "category": st.text_input("类别", value=values["category"]),
                 "status": st.selectbox("核对状态", ["待核对", "已核对"], index=int(values["status"] == "已核对")),
             }
+            st.caption("商品行金额是该行总价，不是单价。候选行需人工核对；可增删行，不推测数量或税率。")
+            table = st.data_editor(
+                pd.DataFrame(initial_rows, columns=["name", "line_total"], dtype=str),
+                num_rows="dynamic", hide_index=True, key=key + "_items",
+                column_config={
+                    "name": st.column_config.TextColumn("商品名称"),
+                    "line_total": st.column_config.TextColumn("行金额（日元）"),
+                },
+            )
             submitted = st.form_submit_button("保存票据", type="primary")
         if submitted:
             try:
+                updated["line_items"] = normalize_items(table.fillna("").to_dict("records"))
                 if record:
                     store.save(updated, receipt_id=record["id"], revision=record["revision"])
                 else:
                     store.save(updated, payload=analysis["payload"], filename=analysis["filename"], raw=raw)
+                st.session_state["receipt_comparison"] = reconcile(updated["line_items"], updated["amount"])
                 st.session_state["receipt_saved"] = True
                 st.rerun()
             except ValueError as exc:
                 st.error(str(exc))
+        comparison = reconcile(initial_rows, values["amount"])
+        if comparison["state"] == "difference":
+            st.warning(comparison["message"])
+        else:
+            st.info(comparison["message"])
+        st.caption("上方比较基于已保存值／初始候选值，修改后保存即可更新。金额一致不代表识别正确。")
 
 mode = st.radio("工作区", ["新增票据", "历史票据"], horizontal=True)
 if mode == "新增票据":
@@ -85,8 +113,9 @@ else:
     rows = store.list(query, status, start, end)
     st.caption(f"共 {len(rows)} 张票据")
     if rows:
-        st.dataframe([{k: v for k, v in row.items() if k != "id"} for row in rows], hide_index=True)
+        st.dataframe([{k: v for k, v in row.items() if k not in ("id", "line_items")} for row in rows], hide_index=True)
         st.download_button("导出筛选结果 CSV", export_csv(rows), "receipts.csv", "text/csv")
+        st.download_button("导出商品明细 CSV", export_items_csv(rows), "receipt_items.csv", "text/csv")
         labels = {r["id"]: f"{r['date'] or '日期待核对'} · {r['store'] or '商户待核对'} · ¥{r['amount'] or '?'} · {r['filename']} · {r['id'][:6]}" for r in rows}
         selected = st.selectbox("打开票据", list(labels), format_func=labels.get)
         record = store.get(selected)
