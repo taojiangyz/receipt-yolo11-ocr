@@ -1,4 +1,4 @@
-"""Explicit UI request; durable one-attempt limit, suggestions kept separate from edits."""
+"""Explicit UI request; durable request tracking and explicit failed-call retry, suggestions kept separate from edits."""
 import io
 import streamlit as st
 from PIL import Image
@@ -15,17 +15,21 @@ def render_multimodal(store, raw, assessment, *, analysis=None, record=None):
         config = VisionConfig.from_env()
     except (ValueError, TypeError):
         config_error = '尚未配置可用的视觉模型，请按项目文档在本机设置。'
-    if assessment['needs_multimodal'] and attempt is None:
-        st.caption('AI 可辅助核对店名、日期和总金额。点击后会向已配置的模型发送原图与相关裁剪图，可能产生费用；每张图片最多请求一次。')
+    retry = bool(attempt and attempt.get('status') == 'failed' and attempt.get('attempt_number', 1) < 3)
+    if assessment['needs_multimodal'] and (attempt is None or retry):
+        st.caption('AI 可辅助核对店名、日期和总金额。点击后会向已配置的模型发送原图与相关裁剪图，可能产生费用；不自动重试；失败后可手动重试，最多三次。')
         if config:
             st.caption('使用模型：' + config.model)
         if config_error:
             st.info(config_error)
-        if st.button('让 AI 辅助核对', key='vision_' + (analysis['digest'] if analysis else record['digest']),
+        if retry:
+            st.warning('上次请求失败，服务端可能已处理或计费。再次发送可能产生额外费用。')
+        label = '重试 AI 核对（可能产生费用）' if retry else '让 AI 辅助核对'
+        if st.button(label, key='vision_' + (analysis['digest'] if analysis else record['digest']),
                      disabled=config is None):
             metadata = {'model': config.model, 'endpoint': config.endpoint,
                         'target_fields': assessment['target_fields']}
-            if store.claim_multimodal_attempt(payload, metadata):
+            if store.claim_multimodal_attempt(payload, metadata, retry=retry):
                 with st.spinner('AI 正在核对…'):
                     try:
                         image = analysis['image'] if analysis else Image.open(io.BytesIO(payload))
@@ -51,5 +55,9 @@ def render_multimodal(store, raw, assessment, *, analysis=None, record=None):
         st.warning('这张图片已有请求记录，可能仍在处理或曾被中断。为避免重复费用，不会自动重新发送；可以直接人工核对。')
     else:
         st.warning('AI 核对失败，原始 OCR 和人工编辑不受影响。请人工核对；不会自动重复请求。')
+    if attempt.get('error_hint'):
+        st.caption(attempt['error_hint'])
+    if attempt.get('status') == 'failed' and attempt.get('attempt_number', 1) >= 3:
+        st.caption('已达到三次请求上限，请先解决配置或网络问题并人工核对。')
     with st.expander('AI 调用记录'):
         st.json(attempt)

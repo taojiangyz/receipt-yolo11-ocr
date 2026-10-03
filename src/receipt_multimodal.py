@@ -5,6 +5,8 @@ import json
 import math
 import os
 import re
+import socket
+import ssl
 import time
 from dataclasses import dataclass, field
 from datetime import date
@@ -24,6 +26,7 @@ class VisionConfig:
     input_price: float | None = None
     output_price: float | None = None
     currency: str = ''
+    timeout_seconds: int = 90
 
     @classmethod
     def from_env(cls):
@@ -43,9 +46,12 @@ class VisionConfig:
             if not math.isfinite(number) or number < 0:
                 raise ValueError('每百万 token 的价格必须是有限非负数')
             return number
+        timeout = int(os.getenv('RECEIPT_VISION_TIMEOUT_SECONDS', '90'))
+        if not 15 <= timeout <= 180:
+            raise ValueError('超时必须在 15 到 180 秒之间')
         return cls(endpoint, model, key, price('RECEIPT_VISION_INPUT_PRICE_PER_MILLION'),
                    price('RECEIPT_VISION_OUTPUT_PRICE_PER_MILLION'),
-                   os.getenv('RECEIPT_VISION_CURRENCY', '').strip())
+                   os.getenv('RECEIPT_VISION_CURRENCY', '').strip(), timeout)
 
 
 class NoRedirect(request.HTTPRedirectHandler):
@@ -57,7 +63,7 @@ def post_json(config, body):
     req = request.Request(config.endpoint, data=json.dumps(body).encode(),
                           headers={'Authorization': 'Bearer ' + config.api_key,
                                    'Content-Type': 'application/json'}, method='POST')
-    with request.build_opener(NoRedirect()).open(req, timeout=45) as response:
+    with request.build_opener(NoRedirect()).open(req, timeout=config.timeout_seconds) as response:
         payload = response.read(MAX_RESPONSE_BYTES + 1)
         if len(payload) > MAX_RESPONSE_BYTES:
             raise ValueError('response_too_large')
@@ -127,6 +133,23 @@ def parse_suggestions(content, target_fields):
     return suggestions, rejected
 
 
+def network_failure(reason):
+    """Classify without logging exception text that may contain credentials or URLs."""
+    if isinstance(reason, ssl.SSLCertVerificationError):
+        code, hint = 'certificate_verification_failed', 'Python 无法验证服务器证书，请检查证书与网络代理。'
+    elif isinstance(reason, socket.gaierror):
+        code, hint = 'dns_resolution_failed', '域名解析失败，请检查 DNS 或网络。'
+    elif isinstance(reason, (TimeoutError, socket.timeout)) or 'timed out' in str(reason).lower():
+        code, hint = 'network_timeout', '连接、TLS 握手或等待响应超时；不能据此判断服务端是否已处理请求。'
+    elif isinstance(reason, ConnectionRefusedError):
+        code, hint = 'connection_refused', '连接被拒绝，请检查网络或代理。'
+    elif isinstance(reason, ssl.SSLError):
+        code, hint = 'tls_error', 'TLS 连接失败，请检查证书或网络代理。'
+    else:
+        code, hint = 'network_error', '网络请求失败，请检查本机连接及代理设置。'
+    return {'network_reason': code, 'reason_type': type(reason).__name__, 'error_hint': hint}
+
+
 def recognize(raw, image, crops, config, *, transport=post_json):
     """Called only after a durable attempt reservation; no retries and no OCR mutation."""
     gate = assess_receipt(raw, detected_fields=raw.get('evidence', {}).get('detected_fields'))
@@ -136,6 +159,7 @@ def recognize(raw, image, crops, config, *, transport=post_json):
     body = build_request(raw, image, crops, config, targets)
     output = dict(status='failed', attempts=1, model=config.model, endpoint=config.endpoint,
                   prompt_version=PROMPT_VERSION, target_fields=targets, suggestions={},
+                  timeout_seconds=config.timeout_seconds,
                   image_count=sum(part['type']=='image_url' for part in body['messages'][0]['content']),
                   cost_estimate=None, usage={})
     start = time.monotonic()
@@ -161,6 +185,12 @@ def recognize(raw, image, crops, config, *, transport=post_json):
         output['status'] = 'completed'
     except error.HTTPError as exc:
         output['error_type'] = 'HTTPError'; output['http_status'] = exc.code
+    except error.URLError as exc:
+        output['error_type'] = 'URLError'
+        output.update(network_failure(exc.reason))
+    except (TimeoutError, ssl.SSLError) as exc:
+        output['error_type'] = type(exc).__name__
+        output.update(network_failure(exc))
     except Exception as exc:
         # Never expose exception bodies, headers, API keys, or provider error payloads.
         output['error_type'] = type(exc).__name__

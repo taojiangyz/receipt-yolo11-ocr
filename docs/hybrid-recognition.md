@@ -25,7 +25,7 @@ crops use the EXIF-normalized full original image.
 
 An optional image-capable Chat Completions adapter is implemented; see
 [configuration and limitations](multimodal-setup.md). Actual requests occur only
-on a user click, after a durable one-attempt reservation in SQLite. Suggestions
+on a user click, after a durable reservation in SQLite; explicit failed-call retries are capped at three total attempts. Suggestions
 never overwrite OCR or edited values. Original `multimodal_plan.status=not_called`
 remains the pre-call planning snapshot; `multimodal_attempts` holds actual status.
 The adapter has passed mocked-response tests, but no live API evaluation has run.

@@ -79,12 +79,26 @@ class ReceiptStore:
             row = db.execute("SELECT result_json FROM multimodal_attempts WHERE digest=?", (digest,)).fetchone()
         return json.loads(row["result_json"]) if row else None
 
-    def claim_multimodal_attempt(self, payload, metadata):
-        """Reserve before sending; UNIQUE digest prevents duplicate calls across reruns/restarts."""
+    def claim_multimodal_attempt(self, payload, metadata, *, retry=False):
+        """Reserve before sending; failed-call retries use a compare-and-swap and retain history."""
         digest = hashlib.sha256(payload).hexdigest()
         now = datetime.now(timezone.utc).isoformat()
         initial = dict(metadata, status="started", attempts=1, suggestions={})
         with self.connection() as db:
+            if retry:
+                row = db.execute("SELECT result_json FROM multimodal_attempts WHERE digest=?", (digest,)).fetchone()
+                if not row:
+                    return False
+                previous = json.loads(row["result_json"])
+                number = previous.get("attempt_number", 1)
+                if previous.get("status") != "failed" or number >= 3:
+                    return False
+                history = previous.get("history", []) + [{k:v for k,v in previous.items() if k != "history"}]
+                initial.update(history=history, attempt_number=number + 1)
+                changed = db.execute("UPDATE multimodal_attempts SET result_json=?,updated_at=? "
+                                     "WHERE digest=? AND result_json=?",
+                                     (json.dumps(initial, ensure_ascii=False), now, digest, row["result_json"]))
+                return changed.rowcount == 1
             inserted = db.execute("INSERT OR IGNORE INTO multimodal_attempts VALUES (?,?,?,?)",
                                   (digest, json.dumps(initial, ensure_ascii=False), now, now))
         return inserted.rowcount == 1
@@ -93,8 +107,18 @@ class ReceiptStore:
         digest = hashlib.sha256(payload).hexdigest()
         now = datetime.now(timezone.utc).isoformat()
         with self.connection() as db:
-            db.execute("UPDATE multimodal_attempts SET result_json=?,updated_at=? WHERE digest=?",
-                       (json.dumps(result, ensure_ascii=False), now, digest))
+            row = db.execute("SELECT result_json FROM multimodal_attempts WHERE digest=?", (digest,)).fetchone()
+            if not row:
+                return False
+            current = json.loads(row["result_json"])
+            if current.get("status") != "started":
+                return False
+            result = dict(result)
+            if current.get("history"):
+                result.update(history=current["history"], attempt_number=current["attempt_number"])
+            changed = db.execute("UPDATE multimodal_attempts SET result_json=?,updated_at=? WHERE digest=? AND result_json=?",
+                                 (json.dumps(result, ensure_ascii=False), now, digest, row["result_json"]))
+            return changed.rowcount == 1
 
     def find_digest(self, payload):
         with self.connection() as db:

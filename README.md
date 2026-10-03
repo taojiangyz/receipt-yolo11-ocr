@@ -62,8 +62,9 @@ and item-total differences are advisory and never trigger model review. Original
 routing reasons are preserved. An optional image-capable Chat Completions adapter
 can now be configured locally. The manager sends a request only when you click
 **让 AI 辅助核对**, only for flagged core fields. Suggestions remain separate from
-OCR and manual edits. A durable SQLite record permits at most one request per
-image digest, including after restarts. Usage, latency and optional cost estimates
+OCR and manual edits. A durable SQLite record prevents automatic duplicate requests, including after
+restarts. Failed calls can be explicitly retried, with a fee notice and a maximum
+of three total attempts per image; prior attempts remain in history. Usage, latency and optional cost estimates
 are recorded. **The integration has passed mocked tests, but has not yet been
 validated with a live model API.** See [setup and limitations](docs/multimodal-setup.md).
 Total differences alone are advisory.
