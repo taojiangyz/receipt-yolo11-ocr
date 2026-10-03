@@ -2,10 +2,10 @@
 import re
 import unicodedata
 from datetime import date
-from src.receipt_fields import extract_amount
+from src.receipt_fields import extract_amount, amount_text_needs_review
 from src.receipt_items import parse_items, reconcile, SPECIAL
 
-RULES_VERSION = '1.2'
+RULES_VERSION = '1.3'
 REQUIRED = {'store_name': '商户', 'date': '日期', 'total_amount': '合计金额'}
 
 
@@ -44,6 +44,15 @@ def assess_receipt(raw, *, detected_fields=None, image_problem=None):
     labeled = set(re.findall(r'(?:合計|総計)\s*[¥￥]?\s*([0-9]+)', text))
     if len(labeled) > 1 and not any(r['code'] == 'amount_conflict' for r in reasons):
         add('amount_conflict', 'total_amount', '存在互相冲突的合计金额', text)
+    if candidate and amount_text_needs_review(raw.get('total_amount_raw', '')):
+        add('amount_ocr_noise', 'total_amount',
+            '金额原文缺少明确合计标签且包含其他识别片段，需对照原图核对',
+            str(raw.get('total_amount_raw', '')))
+    amount_recovery = raw.get('amount_recovery') or {}
+    if amount_recovery.get('candidate'):
+        add('amount_recovery_unverified', 'total_amount',
+            '金额重试产生了候选，需对照原图确认，不能仅凭整数格式接受',
+            str(amount_recovery.get('raw', '')))
     recovery = raw.get('date_recovery') or {}
     if recovery.get('candidate'):
         add('date_recovery_unverified', 'date',

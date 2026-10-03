@@ -130,3 +130,24 @@ for date crops only. Original crops then matched all 39 visually read dates. Thi
 supersedes the default-preprocessing diagnostic as the released date configuration;
 it does not change its historical findings. See [method, limits and results](date-crop-diagnostic.md).
 Saved historical OCR is not rewritten. External multimodal calls remain unimplemented.
+
+## Amount recovery and rules 1.3
+
+JPY parsing accepts complete integer tokens and consistently grouped thousands
+using commas or OCR-substituted dots. It never accepts a numeric prefix before
+an incomplete separator, decimal or overlong token. Repeated identical currency
+amounts are deduplicated; distinct amounts remain ambiguous unless labelled totals
+resolve them. Clearly fragmented multi-line currency digits are left unresolved.
+
+The initial amount OCR settings are retained: disabling document preprocessing
+for every crop caused regressions in the development comparison. Only missing
+amounts or unanchored noisy amount text receive one retry without document
+orientation classification or unwarping. Retry errors preserve the receipt.
+Original text stays in `total_amount_raw`; `amount_recovery` records retry evidence.
+Nonempty retry candidates always require review. Unanchored original amount text
+with unrelated OCR fragments also triggers review under rules 1.3. A clean single
+currency line remains usable, but this does not guarantee correct digits.
+
+Only merchant, date and total remain required. No item-related trigger was added.
+Existing saved OCR is not rewritten. The pipeline version changed to invalidate
+old inference caches, while read-time rules refresh without mutating stored reports.

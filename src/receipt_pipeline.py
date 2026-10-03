@@ -1,6 +1,6 @@
 from pathlib import Path
 import os
-from src.receipt_fields import normalize_store_name, extract_date, extract_amount, date_candidates
+from src.receipt_fields import normalize_store_name, extract_date, extract_amount, date_candidates, amount_text_needs_review
 import io
 import hashlib
 import uuid
@@ -20,7 +20,7 @@ LEGACY_MODEL_PATH = Path(
 RUNTIME_DIR = Path(".streamlit_runtime")
 RUNTIME_DIR.mkdir(exist_ok=True)
 
-PIPELINE_VERSION = "2.0-date-crop-2"
+PIPELINE_VERSION = "2.0-amount-recovery-3"
 
 FIELDS = ["store_name", "date", "total_amount", "items_area"]
 
@@ -72,6 +72,19 @@ def recover_date(raw_text, crop, run_dir, ocr):
                 "attempts": 1, "error_type": type(exc).__name__}
 
 
+def recover_amount(raw_text, crop, ocr):
+    """One conservative retry; preserve original OCR and never imply correctness."""
+    if crop is None or (extract_amount(raw_text) and not amount_text_needs_review(raw_text)):
+        return None
+    try:
+        raw = run_ocr_on_image(ocr, crop["path"], amount_retry=True)
+        return {"source": "amount_crop_without_document_preprocessing", "raw": raw,
+                "candidate": extract_amount(raw), "attempts": 1}
+    except Exception as exc:
+        return {"source": "amount_crop_without_document_preprocessing", "raw": "",
+                "candidate": "", "attempts": 1, "error_type": type(exc).__name__}
+
+
 def expand_box_custom(x1, y1, x2, y2, img_w, img_h, left=0.05, right=0.05, top=0.05, bottom=0.05):
     box_w = x2 - x1
     box_h = y2 - y1
@@ -84,13 +97,13 @@ def expand_box_custom(x1, y1, x2, y2, img_w, img_h, left=0.05, right=0.05, top=0
     return x1, y1, x2, y2
 
 
-def run_ocr_on_image(ocr, image_path: Path, *, date_crop=False) -> str:
+def run_ocr_on_image(ocr, image_path: Path, *, date_crop=False, amount_retry=False) -> str:
     if not image_path.exists():
         return ""
 
-    # A narrow date crop is not a full document. Whole-page preprocessing
-    # corrupted leading year digits in the audited receipt crops.
-    if date_crop:
+    # Date recognition and optional amount retry bypass full-document preprocessing.
+    # The first amount pass retains its original settings.
+    if date_crop or amount_retry:
         result = ocr.predict(str(image_path), use_doc_orientation_classify=False,
                              use_doc_unwarping=False)
     else:
@@ -232,6 +245,11 @@ def analyze_image(payload: bytes, filename: str) -> dict:
         result_json["date_recovery"] = recovery
         if recovery["candidate"]:
             result_json["date_candidate"] = recovery["candidate"]
+    amount_recovery = recover_amount(raw.get("total_amount", ""), crops.get("total_amount"), ocr)
+    if amount_recovery is not None:
+        result_json["amount_recovery"] = amount_recovery
+        if amount_recovery["candidate"]:
+            result_json["total_amount_candidate"] = amount_recovery["candidate"]
     result_json["evidence"] = {
         "detected_fields": list(crops),
         "regions": {field: {"box": crop["box"], "detection_confidence": crop["confidence"]}
