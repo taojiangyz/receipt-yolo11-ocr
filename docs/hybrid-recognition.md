@@ -151,3 +151,14 @@ currency line remains usable, but this does not guarantee correct digits.
 Only merchant, date and total remain required. No item-related trigger was added.
 Existing saved OCR is not rewritten. The pipeline version changed to invalidate
 old inference caches, while read-time rules refresh without mutating stored reports.
+
+### Missing core-region recovery (rules 1.4)
+
+The primary YOLO pass keeps confidence 0.25. Only when store name, date, or
+total amount has no detected region, one additional pass uses confidence 0.15.
+It takes the highest-confidence region per missing core field, never replaces
+existing crops, and does not recover item regions. Recovery source, threshold,
+and detection confidence are retained in `region_recovery`. Any recovered
+region requires human review (`region_recovery_unverified`), even when its OCR
+candidate has a valid format. An optional detection failure leaves the primary
+results usable. No external multimodal API is called by this fallback.

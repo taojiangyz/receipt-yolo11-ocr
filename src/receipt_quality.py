@@ -5,7 +5,7 @@ from datetime import date
 from src.receipt_fields import extract_amount, amount_text_needs_review
 from src.receipt_items import parse_items, reconcile, SPECIAL
 
-RULES_VERSION = '1.3'
+RULES_VERSION = '1.4'
 REQUIRED = {'store_name': '商户', 'date': '日期', 'total_amount': '合计金额'}
 
 
@@ -58,6 +58,10 @@ def assess_receipt(raw, *, detected_fields=None, image_problem=None):
         add('date_recovery_unverified', 'date',
             '增强识别产生了日期候选，需对照原图确认，不能仅凭格式合法接受',
             str(recovery.get('raw', '')))
+    for field, evidence in (raw.get('region_recovery') or {}).items():
+        if field in REQUIRED:
+            add('region_recovery_unverified', field,
+                '较低检测阈值补回了区域，请对照原图确认字段', str(evidence))
     items = str(raw.get('items_text') or '')
     parsed = parse_items(items)
     ambiguous = [line for line in parsed['unmatched']

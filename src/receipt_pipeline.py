@@ -20,7 +20,7 @@ LEGACY_MODEL_PATH = Path(
 RUNTIME_DIR = Path(".streamlit_runtime")
 RUNTIME_DIR.mkdir(exist_ok=True)
 
-PIPELINE_VERSION = "2.0-amount-recovery-3"
+PIPELINE_VERSION = "2.0-region-recovery-4"
 
 FIELDS = ["store_name", "date", "total_amount", "items_area"]
 
@@ -130,7 +130,7 @@ def run_ocr_on_image(ocr, image_path: Path, *, date_crop=False, amount_retry=Fal
     return "\n".join(texts)
 
 
-def crop_detected_fields(image: Image.Image, result, run_dir: Path):
+def crop_detected_fields(image: Image.Image, result, run_dir: Path, allowed_fields=None):
     img_w, img_h = image.size
     names = result.names
 
@@ -144,7 +144,7 @@ def crop_detected_fields(image: Image.Image, result, run_dir: Path):
         conf = float(box.conf[0].item())
         cls_name = names.get(cls_id, str(cls_id))
 
-        if cls_name not in FIELDS:
+        if cls_name not in FIELDS or (allowed_fields is not None and cls_name not in allowed_fields):
             continue
 
         if cls_name not in best_boxes or conf > best_boxes[cls_name]["conf"]:
@@ -195,6 +195,24 @@ def crop_detected_fields(image: Image.Image, result, run_dir: Path):
     return crops
 
 
+def recover_missing_regions(model, input_path, image, crops, run_dir):
+    """One lower-threshold pass for missing core regions; never replace existing crops."""
+    missing = set(FIELDS[:3]) - set(crops)
+    if not missing:
+        return {}
+    try:
+        result = model.predict(str(input_path), imgsz=640, conf=0.15,
+                               device="cpu", verbose=False)[0]
+        recovered = crop_detected_fields(image, result, run_dir, allowed_fields=missing)
+        crops.update(recovered)
+        return {field: {"source": "lower_threshold_detection", "threshold": 0.15,
+                        "detection_confidence": crop["confidence"]}
+                for field, crop in recovered.items()}
+    except Exception:
+        # Optional detection must not discard a successful primary pass.
+        return {}
+
+
 def build_json_result(image_id: str, raw_texts: dict) -> dict:
     store_raw = raw_texts.get("store_name", "")
     date_raw = raw_texts.get("date", "")
@@ -232,10 +250,12 @@ def analyze_image(payload: bytes, filename: str) -> dict:
     result = load_yolo_model().predict(str(input_path), imgsz=640, conf=0.25,
                                       device="cpu", verbose=False)[0]
     crops = crop_detected_fields(image, result, run_dir)
+    region_recovery = recover_missing_regions(load_yolo_model(), input_path, image, crops, run_dir)
     ocr = load_paddle_ocr()
     raw = {field: run_ocr_on_image(ocr, crop["path"], date_crop=field == "date")
            for field, crop in crops.items()}
     result_json = build_json_result(Path(filename).stem, raw)
+    result_json["region_recovery"] = region_recovery
     result_json["ocr_config"] = {
         "pipeline_version": PIPELINE_VERSION,
         "date_crop": {"use_doc_orientation_classify": False, "use_doc_unwarping": False},

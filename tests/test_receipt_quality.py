@@ -42,7 +42,7 @@ class QualityTests(unittest.TestCase):
         raw = baseline(items_text='')
         raw['quality_gate'] = {'rules_version': '1.0', 'needs_multimodal': True}
         result = annotate_quality(raw)
-        self.assertEqual(result['quality_gate']['rules_version'], '1.3')
+        self.assertEqual(result['quality_gate']['rules_version'], '1.4')
         self.assertFalse(result['quality_gate']['needs_multimodal'])
         self.assertTrue(raw['quality_gate']['needs_multimodal'])
         gate = assess_receipt(baseline(date_candidate='', items_text=''))
