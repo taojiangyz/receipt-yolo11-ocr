@@ -30,7 +30,7 @@ def editor(values, image, raw, key, *, analysis=None, record=None):
         assessment = assess_receipt(raw, detected_fields=raw.get("evidence", {}).get("detected_fields"))
         with st.expander("识别质量检查", expanded=assessment["needs_multimodal"]):
             if assessment["needs_multimodal"]:
-                st.warning("建议多模态补救（模型尚未接入，本次未发送图片）")
+                st.warning("核心字段需要核对，可使用下方 AI 辅助核对。")
             elif assessment["route"] == "retake":
                 st.warning("建议重拍或人工核对")
             else:
@@ -40,6 +40,8 @@ def editor(values, image, raw, key, *, analysis=None, record=None):
             for advisory in assessment["advisories"]:
                 st.caption(advisory["message"])
             st.caption("当前规则只对店名、日期、总金额判断补救；商品明细仅提示。基于原始 OCR 重新检查，历史报告保持不变。")
+        from src.receipt_multimodal_view import render_multimodal
+        render_multimodal(store, raw, assessment, analysis=analysis, record=record)
         st.caption("识别结果是候选值，请对照原图。缺失字段可先留空，保存为待核对。")
         parsed = parse_items(values["items"])
         if parsed["unmatched"]:

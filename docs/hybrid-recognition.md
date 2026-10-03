@@ -18,15 +18,17 @@ by themselves trigger a total conflict. YOLO confidence is detection evidence,
 not OCR confidence.
 
 Each new recognition JSON includes `quality_gate`, `evidence`, and `multimodal_plan`.
-The original candidates remain unchanged. Evidence stores EXIF-normalized image
+Original OCR is retained; local recovery candidates are tracked separately. Evidence stores EXIF-normalized image
 size, crop boxes and detection scores. Original image bytes are preserved by the
-library; field crops are available in the analysis/runtime directory. A future
-adapter must reconstruct crops from original images with the same EXIF orientation
-if runtime files are missing.
+library; field crops are available in the analysis/runtime directory. The adapter sends available target crops; historical records without runtime
+crops use the EXIF-normalized full original image.
 
-**There is no external model adapter yet.** `multimodal_plan.status=not_called`
-and `max_automatic_attempts=1` describe the planned policy, not an executed request
-or implemented retry counter. No API credentials are required for this stage.
+An optional image-capable Chat Completions adapter is implemented; see
+[configuration and limitations](multimodal-setup.md). Actual requests occur only
+on a user click, after a durable one-attempt reservation in SQLite. Suggestions
+never overwrite OCR or edited values. Original `multimodal_plan.status=not_called`
+remains the pre-call planning snapshot; `multimodal_attempts` holds actual status.
+The adapter has passed mocked-response tests, but no live API evaluation has run.
 The manager applies the current rules to original OCR on read, including older
 saved receipts. Stored historical reports remain unchanged. Cached inference also
 refreshes its routing report without repeating OCR. Model review targets only
@@ -129,7 +131,7 @@ The follow-up bounded comparison disabled full-document orientation and unwarpin
 for date crops only. Original crops then matched all 39 visually read dates. This
 supersedes the default-preprocessing diagnostic as the released date configuration;
 it does not change its historical findings. See [method, limits and results](date-crop-diagnostic.md).
-Saved historical OCR is not rewritten. External multimodal calls remain unimplemented.
+Saved historical OCR is not rewritten. External calls are now optional and explicitly initiated in the manager; live evaluation is pending.
 
 ## Amount recovery and rules 1.3
 

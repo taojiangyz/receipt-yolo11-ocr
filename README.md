@@ -54,13 +54,19 @@ candidate and source are recorded separately in `date_recovery`. Retry failures
 leave the receipt available for review. Enhanced candidates always require date
 review, even when their format is valid. No whole-image date selection is attempted.
 
-### Conditional multimodal review — routing stage
+### Conditional multimodal review — optional image API
 
 The manager now shows a versioned quality check for missing/invalid fields,
 conflicting totals in merchant/date/total only. Item pairing, missing item text
 and item-total differences are advisory and never trigger model review. Original OCR, crop coordinates and
-routing reasons are preserved. A local review plan is prepared, but **no external
-multimodal model has been connected or called**. Total differences alone are advisory.
+routing reasons are preserved. An optional image-capable Chat Completions adapter
+can now be configured locally. The manager sends a request only when you click
+**让 AI 辅助核对**, only for flagged core fields. Suggestions remain separate from
+OCR and manual edits. A durable SQLite record permits at most one request per
+image digest, including after restarts. Usage, latency and optional cost estimates
+are recorded. **The integration has passed mocked tests, but has not yet been
+validated with a live model API.** See [setup and limitations](docs/multimodal-setup.md).
+Total differences alone are advisory.
 
 See [hybrid recognition and evaluation](docs/hybrid-recognition.md) for annotation
 commands, metrics and limitations. An unreviewed manifest never produces an accuracy

@@ -30,3 +30,9 @@ README_before_*.md
 
 # Local receipt library (images, OCR and review history)
 .receipt_library/
+
+# Local API credentials
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml

@@ -53,6 +53,9 @@ class ReceiptStore:
                     filename TEXT NOT NULL, image BLOB NOT NULL, raw_json TEXT NOT NULL,
                     values_json TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 1,
                     created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS multimodal_attempts (
+                    digest TEXT PRIMARY KEY, result_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS changes (
                     id INTEGER PRIMARY KEY, receipt_id TEXT NOT NULL,
                     before_json TEXT, after_json TEXT NOT NULL, changed_at TEXT NOT NULL,
@@ -69,6 +72,29 @@ class ReceiptStore:
                 yield db
         finally:
             db.close()
+
+    def get_multimodal_attempt(self, payload):
+        digest = hashlib.sha256(payload).hexdigest()
+        with self.connection() as db:
+            row = db.execute("SELECT result_json FROM multimodal_attempts WHERE digest=?", (digest,)).fetchone()
+        return json.loads(row["result_json"]) if row else None
+
+    def claim_multimodal_attempt(self, payload, metadata):
+        """Reserve before sending; UNIQUE digest prevents duplicate calls across reruns/restarts."""
+        digest = hashlib.sha256(payload).hexdigest()
+        now = datetime.now(timezone.utc).isoformat()
+        initial = dict(metadata, status="started", attempts=1, suggestions={})
+        with self.connection() as db:
+            inserted = db.execute("INSERT OR IGNORE INTO multimodal_attempts VALUES (?,?,?,?)",
+                                  (digest, json.dumps(initial, ensure_ascii=False), now, now))
+        return inserted.rowcount == 1
+
+    def finish_multimodal_attempt(self, payload, result):
+        digest = hashlib.sha256(payload).hexdigest()
+        now = datetime.now(timezone.utc).isoformat()
+        with self.connection() as db:
+            db.execute("UPDATE multimodal_attempts SET result_json=?,updated_at=? WHERE digest=?",
+                       (json.dumps(result, ensure_ascii=False), now, digest))
 
     def find_digest(self, payload):
         with self.connection() as db:

@@ -24,13 +24,13 @@ class ManagerUITests(unittest.TestCase):
                 self.assertFalse(app.exception)
                 app.text_input[2].set_value('620')
                 app.selectbox[0].set_value('已核对')
-                app.button[0].click().run()
+                next(b for b in app.button if b.label == '保存票据').click().run()
                 self.assertFalse(app.exception)
                 self.assertTrue(app.success)
                 app.radio[0].set_value('历史票据').run()
                 self.assertEqual(app.text_input[3].value, '620')
                 app.text_input[3].set_value('630')
-                app.button[0].click().run()
+                next(b for b in app.button if b.label == '保存票据').click().run()
                 self.assertFalse(app.exception)
                 self.assertEqual(app.text_input[3].value, '630')
                 from pathlib import Path
@@ -59,7 +59,7 @@ class ManagerUITests(unittest.TestCase):
             app.radio[0].set_value('历史票据').run()
             app.session_state[f'edit_{rid}_1_items'] = {
                 'edited_rows': {0: {'line_total': '190'}}, 'added_rows': [], 'deleted_rows': []}
-            app.button[0].click().run()
+            next(b for b in app.button if b.label == '保存票据').click().run()
             self.assertFalse(app.exception)
             self.assertEqual(store.get(rid)['values']['line_items'][0]['line_total'], '190')
             self.assertEqual(store.history(rid)[0]['before']['line_items'][0]['line_total'], '180')
