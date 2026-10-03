@@ -42,6 +42,28 @@ class VisionRetryTests(unittest.TestCase):
                 self.assertEqual(current['history'][0]['error_type'],'URLError')
             self.assertFalse(store.claim_multimodal_attempt(payload,{},retry=True))
 
+    def test_one_authorized_extra_attempt_preserves_all_history(self):
+        import json
+        with tempfile.TemporaryDirectory() as tmp:
+            store=ReceiptStore(Path(tmp)/'test.db');payload=b'photo'
+            store.claim_multimodal_attempt(payload,{})
+            failed={'status':'failed','attempts':1,'http_status':401}
+            store.finish_multimodal_attempt(payload,failed)
+            for _ in range(2):
+                store.claim_multimodal_attempt(payload,{},retry=True)
+                store.finish_multimodal_attempt(payload,failed)
+            current=store.get_multimodal_attempt(payload)
+            current['manual_retry_limit']=4
+            with store.connection() as db:
+                db.execute('UPDATE multimodal_attempts SET result_json=?', (json.dumps(current),))
+            self.assertTrue(store.claim_multimodal_attempt(payload,{},retry=True))
+            store.finish_multimodal_attempt(payload,failed)
+            current=store.get_multimodal_attempt(payload)
+            self.assertEqual(current['attempt_number'],4)
+            self.assertEqual(len(current['history']),3)
+            self.assertEqual(current['manual_retry_limit'],4)
+            self.assertFalse(store.claim_multimodal_attempt(payload,{},retry=True))
+
     def test_completed_result_cannot_be_retried(self):
         with tempfile.TemporaryDirectory() as tmp:
             store=ReceiptStore(Path(tmp)/'test.db');payload=b'photo'

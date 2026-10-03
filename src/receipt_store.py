@@ -91,10 +91,12 @@ class ReceiptStore:
                     return False
                 previous = json.loads(row["result_json"])
                 number = previous.get("attempt_number", 1)
-                if previous.get("status") != "failed" or number >= 3:
+                if previous.get("status") != "failed" or number >= previous.get("manual_retry_limit", 3):
                     return False
                 history = previous.get("history", []) + [{k:v for k,v in previous.items() if k != "history"}]
                 initial.update(history=history, attempt_number=number + 1)
+                if "manual_retry_limit" in previous:
+                    initial["manual_retry_limit"] = previous["manual_retry_limit"]
                 changed = db.execute("UPDATE multimodal_attempts SET result_json=?,updated_at=? "
                                      "WHERE digest=? AND result_json=?",
                                      (json.dumps(initial, ensure_ascii=False), now, digest, row["result_json"]))
@@ -114,6 +116,8 @@ class ReceiptStore:
             if current.get("status") != "started":
                 return False
             result = dict(result)
+            if "manual_retry_limit" in current:
+                result["manual_retry_limit"] = current["manual_retry_limit"]
             if current.get("history"):
                 result.update(history=current["history"], attempt_number=current["attempt_number"])
             changed = db.execute("UPDATE multimodal_attempts SET result_json=?,updated_at=? WHERE digest=? AND result_json=?",
