@@ -1,8 +1,8 @@
-# Japanese Receipt Intelligence 2.0 — YOLO11 + PaddleOCR
+# Japanese Receipt Intelligence 2.0 — YOLO11, OCR & Multimodal Review
 
 [English](README.md) | [日本語](README.ja.md)
 
-A local Japanese receipt manager: detect fields with YOLO11, read them with PaddleOCR, review merchant/date/total, and save, search and export receipts. The original 1.0 recognition laboratory and detector results are preserved.
+A local AI application for Japanese receipts: YOLO11 detects fields, PaddleOCR reads them, and an optional image model helps review uncertain merchant/date/total values before saving, searching and CSV export. The original 1.0 recognition laboratory and detector results are preserved.
 
 ## 2.0 — local receipt manager (MVP)
 
@@ -64,9 +64,11 @@ can now be configured locally. The manager sends a request only when you click
 **让 AI 辅助核对**, only for flagged core fields. Suggestions remain separate from
 OCR and manual edits. A durable SQLite record prevents automatic duplicate requests, including after
 restarts. Failed calls can be explicitly retried, with a fee notice and a maximum
-of three total attempts per image; prior attempts remain in history. Usage, latency and optional cost estimates
-are recorded. **The integration has passed mocked tests, but has not yet been
-validated with a live model API.** See [setup and limitations](docs/multimodal-setup.md).
+of three total attempts per image by default; prior attempts remain in history.
+A maintenance-only, explicitly authorized fourth attempt is supported after credential correction. Usage, latency and optional cost estimates
+are recorded. **Live calls with Alibaba Cloud Qwen `qwen3-vl-plus` recovered the missing totals
+on two selected development receipts (129 and 135 JPY), followed by manual entry
+and saving. This is a workflow smoke test, not a held-out accuracy benchmark.** See [setup and limitations](docs/multimodal-setup.md).
 Total differences alone are advisory.
 
 See [hybrid recognition and evaluation](docs/hybrid-recognition.md) for annotation
@@ -74,6 +76,24 @@ commands, metrics and limitations. An unreviewed manifest never produces an accu
 claim. Under rules 1.1, 57/102 historical outputs trigger review (previously 97/102
 when item pairing was included). These are routing counts, not accuracy or proven
 cost savings.
+
+### Current validation (2026-10-03)
+
+- **51 automated tests** cover parsing, recovery routing, API response validation,
+  network failures, explicit retry history, storage and the Streamlit save/reopen flow.
+- On 17 development photos, local changes improved merchant/date/total agreement
+  with Codex visual references from **6/17 to 15/17**. References are not independently
+  verified; these photos were used for debugging.
+- Two selected local-OCR failures were checked through the live image API. Returned
+  totals matched the visual references and were saved through the editor; both
+  records remain **pending review** in the database.
+- The two successful requests reported **6,035 total tokens**, with latency of about
+  **80 and 52 seconds**. Failed-request usage and actual bill charges are unknown.
+  No overall multimodal accuracy or proven cost-saving claim is made.
+
+See [validation details](docs/validation-v2.md). The existing demo animation and
+1.0 detector metrics are retained; the animation does not demonstrate the latest
+multimodal review flow.
 
 ### Batch processing
 

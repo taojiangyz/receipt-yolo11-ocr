@@ -28,7 +28,7 @@ An optional image-capable Chat Completions adapter is implemented; see
 on a user click, after a durable reservation in SQLite; explicit failed-call retries are capped at three total attempts. Suggestions
 never overwrite OCR or edited values. Original `multimodal_plan.status=not_called`
 remains the pre-call planning snapshot; `multimodal_attempts` holds actual status.
-The adapter has passed mocked-response tests, but no live API evaluation has run.
+The adapter has passed mocked-response tests. Two selected development receipts have also completed live Qwen image API calls, manual entry and saving; see [validation details](validation-v2.md). No held-out API accuracy benchmark is available.
 The manager applies the current rules to original OCR on read, including older
 saved receipts. Stored historical reports remain unchanged. Cached inference also
 refreshes its routing report without repeating OCR. Model review targets only
@@ -131,7 +131,7 @@ The follow-up bounded comparison disabled full-document orientation and unwarpin
 for date crops only. Original crops then matched all 39 visually read dates. This
 supersedes the default-preprocessing diagnostic as the released date configuration;
 it does not change its historical findings. See [method, limits and results](date-crop-diagnostic.md).
-Saved historical OCR is not rewritten. External calls are now optional and explicitly initiated in the manager; live evaluation is pending.
+Saved historical OCR is not rewritten. External calls are now optional and explicitly initiated in the manager; two live workflow checks are documented, while held-out evaluation remains pending.
 
 ## Amount recovery and rules 1.3
 
