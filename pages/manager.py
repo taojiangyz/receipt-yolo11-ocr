@@ -16,7 +16,10 @@ if st.session_state.pop("receipt_saved", False):
     st.success("票据已保存，原始识别结果与修改记录均已保留。")
     comparison = st.session_state.pop("receipt_comparison", None)
     if comparison:
-        st.warning(comparison["message"]) if comparison["state"] == "difference" else st.info(comparison["message"])
+        if comparison["state"] == "difference":
+            st.warning(comparison["message"])
+        else:
+            st.info(comparison["message"])
 
 
 def editor(values, image, raw, key, *, analysis=None, record=None):
